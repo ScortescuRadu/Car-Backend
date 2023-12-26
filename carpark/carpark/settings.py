@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'corsheaders',
     'sql_authentication',
+    'map_markers',
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
     'drf_yasg',
@@ -55,6 +56,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+CORS_ORIGIN_ALLOW_ALL = True
 
 # CORS_ALLOWED_ORIGINS = [
 #     "https://www.safesite.com",
@@ -167,4 +170,5 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=15),
     'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True
 }
