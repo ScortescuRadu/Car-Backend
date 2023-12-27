@@ -49,6 +49,7 @@ urlpatterns = [
     path('', include(router.urls)),
     path('auth/', include('sql_authentication.urls')),
     path('map/', include('map_markers.urls')),
+    path('article/', include('article.urls')),
 
     path('api-auth/', include('rest_framework.urls')),
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
