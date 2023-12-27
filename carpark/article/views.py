@@ -74,3 +74,21 @@ class ArticleListView(generics.ListAPIView):
     queryset = Article.objects.filter(is_featured=True)
     serializer_class = ArticlesListSerializer
     pagination_class = CustomPagination
+
+# GET all Articles
+class ArticleDetailsView(generics.RetrieveAPIView):
+    queryset = Article.objects.filter(is_featured=True)
+    serializer_class = ArticlesListSerializer
+
+    def get(self, request, *args, **kwargs):
+        try:
+            id = request.query_params['id']
+            print(id)
+            if id != None:
+                article = Article.objects.get(id=id)
+                serializer = ArticleSerializer(article)
+        except:
+            articles = self.get_queryset()
+            serializer = ArticleSerializer(articles, many=True)
+
+        return Response(serializer.data)
