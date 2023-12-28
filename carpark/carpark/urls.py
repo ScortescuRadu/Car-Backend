@@ -47,9 +47,11 @@ urlpatterns = [
     path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('', include(router.urls)),
-    path('auth/', include('sql_authentication.urls')),
+    # path('auth/', include('sql_authentication.urls')),
     path('map/', include('map_markers.urls')),
     path('article/', include('article.urls')),
+
+    path('account/', include('account.urls')),
 
     path('api-auth/', include('rest_framework.urls')),
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),

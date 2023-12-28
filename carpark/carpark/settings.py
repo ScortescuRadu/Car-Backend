@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'sql_authentication',
     'map_markers',
     'article',
+    'account',
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
     'drf_yasg',
@@ -145,6 +146,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+AUTH_USER_MODEL = 'account.User'
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
