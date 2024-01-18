@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'account',
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
+    'rest_framework.authtoken',
     'drf_yasg',
 ]
 
@@ -59,14 +60,20 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-CORS_ORIGIN_ALLOW_ALL = True
+# CORS_ORIGIN_ALLOW_ALL = True
+# CORS_ALLOW_CREDENTIALS = True
 
-# CORS_ALLOWED_ORIGINS = [
-#     "https://www.safesite.com",
-# ]
+# CSRF_COOKIE_SECURE = False
+# CSRF_COOKIE_SAMESITE = None
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+]
+
+# CSRF_TRUSTED_ORIGINS = ['http://localhost:3000','https://*.127.0.0.1']
 
 # CSRF_TRUSTED_ORIGINS = [
-#     'www.safesite.com',
+#     "http://localhost:3000",
 # ]
 
 ROOT_URLCONF = 'carpark.urls'
@@ -105,13 +112,13 @@ DATABASES = {
 }
 
 # Use DRF's authentication classes
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.BasicAuthentication',
-        'rest_framework.authentication.SessionAuthentication',
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ],
-}
+# REST_FRAMEWORK = {
+#     'DEFAULT_AUTHENTICATION_CLASSES': [
+#         'rest_framework.authentication.BasicAuthentication',
+#         'rest_framework.authentication.SessionAuthentication',
+#         'rest_framework_simplejwt.authentication.JWTAuthentication',
+#     ],
+# }
 
 # DRF-yasg settings
 SWAGGER_SETTINGS = {
@@ -146,7 +153,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-AUTH_USER_MODEL = 'account.User'
+# AUTH_USER_MODEL = 'account.User'
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
