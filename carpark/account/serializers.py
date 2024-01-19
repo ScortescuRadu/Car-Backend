@@ -1,11 +1,13 @@
 from rest_framework import serializers
+# from .models import User, UserInfo
+# from django.contrib.auth.models import User
+from .models import User
 import re
-from django.contrib.auth.models import User
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta(object):
         model = User
-        fields = ['id', 'username', 'password']
+        fields = ['id', 'email', 'password']
 
     def validate_password(self, value):
         # Add your password validation logic here
@@ -20,16 +22,7 @@ class UserSerializer(serializers.ModelSerializer):
 
         return value
 
-    def validate_username(self, value):
-        email_regex = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
-
-        if not re.match(email_regex, value):
-            raise serializers.ValidationError("Username must have an email structure.")
-
-        return value
-
     def create(self, validated_data):
-        username = validated_data.get('username', None)
         password = validated_data.pop('password', None)
         instance = self.Meta.model(**validated_data)
         if password is not None:
@@ -37,10 +30,8 @@ class UserSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
 
-
 class TokenInputSerializer(serializers.Serializer):
     token = serializers.CharField()
 
-
 class LogoutSerializer(serializers.Serializer):
-    pass
+    token = serializers.CharField()

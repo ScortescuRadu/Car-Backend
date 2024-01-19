@@ -8,12 +8,14 @@ from rest_framework.authentication import BaseAuthentication
 from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
-from django.contrib.auth.models import User
+# from django.contrib.auth.models import User
+from .models import User
 from rest_framework.authtoken.models import Token
 from rest_framework.authentication import SessionAuthentication, TokenAuthentication
 from rest_framework.authtoken.models import Token
 
 from .serializers import UserSerializer, TokenInputSerializer, LogoutSerializer
+# from .models import BlacklistedToken
 
 class RegisterView(generics.CreateAPIView):
     serializer_class = UserSerializer
@@ -22,24 +24,26 @@ class RegisterView(generics.CreateAPIView):
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
-            user = User.objects.get(username=request.data['username'])
+            user = User.objects.get(email=request.data['email'])
             user.set_password(request.data['password'])
             user.save()
             token = Token.objects.create(user=user)
-            return Response({'token': token.key})
-        return Response(serializer.errors, status=status.HTTP_200_OK)
+            return Response({'token': token.key}, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class LoginView(generics.CreateAPIView):
     serializer_class = UserSerializer
 
     def post(self, request):
-        user = get_object_or_404(User, username=request.data['username'])
+        user = get_object_or_404(User, email=request.data['email'])
+
         if not user.check_password(request.data['password']):
-            return Response("missing user", status=status.HTTP_404_NOT_FOUND)
+            return Response({"detail": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
+
         token, created = Token.objects.get_or_create(user=user)
         serializer = UserSerializer(user)
-        return Response({'token': token.key})
+        return Response({'token': token.key}, status=status.HTTP_200_OK)
 
 class UserInfoView(generics.GenericAPIView):
     # authentication_classes = [TokenAuthentication]
@@ -57,7 +61,7 @@ class UserInfoView(generics.GenericAPIView):
                 user_id = Token.objects.get(key=token_key).user_id
                 user = User.objects.get(id=user_id)
                 
-                return Response({'user': user.username})
+                return Response({'user': user.email})
             except Token.DoesNotExist:
                 return Response({'error': 'Invalid token'}, status=400)
             except User.DoesNotExist:
@@ -67,14 +71,34 @@ class UserInfoView(generics.GenericAPIView):
 
 class LogoutView(generics.CreateAPIView):
     serializer_class = LogoutSerializer
-
-    def post(self, request, *args, **kwargs):
-        response = self.create(request, *args, **kwargs)
-        response.delete_cookie('jwt')
-        response.data = {
-            'message': 'success'
-        }
-        return response
+    # authentication_classes = [TokenAuthentication]
+    # permission_classes = [IsAuthenticated]
 
     def create(self, request, *args, **kwargs):
-        return Response({'detail': 'Logout successful'})
+        token = request.data.get('token', None)
+        
+        if not token:
+            return Response({'error': 'Token not provided'}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = request.user
+        authenticated_user = user.is_authenticated
+
+        # Ensure the user is authenticated before blacklisting the token
+        if authenticated_user:
+            # Blacklist the token
+            BlacklistedToken.objects.create(user=user, token=token)
+        
+        # Delete the token (if it exists)
+        try:
+            token_obj = Token.objects.get(key=token)
+            token_obj.delete()
+        except Token.DoesNotExist:
+            response_data = {
+                'message': 'Token does not exist.'
+            }
+            return Response(response_data, status=status.HTTP_200_OK)
+
+        response_data = {
+            'message': 'Logout successful. Token blacklisted.'
+        }
+        return Response(response_data, status=status.HTTP_200_OK)

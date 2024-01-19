@@ -1,22 +1,27 @@
 from django.db import models
+# from django.contrib.auth.models import User
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth import get_user_model
+from django.db import models
+from django.utils.translation import gettext_lazy as _
 
 # Create your models here.
 
-# class User(AbstractUser):
-#     name = models.CharField(max_length=255)
-#     email = models.CharField(max_length=255, unique=True)
-#     password = models.CharField(max_length=255)
-#     username = None
+class User(AbstractUser):
+    # Add any additional fields you need for your custom user model
+    email = models.EmailField(unique=True, null=False, blank=False)
+    username = models.CharField(max_length=150, unique=True, null=True, blank=True)
 
-#     USERNAME_FIELD = 'email'
-#     REQUIRED_FIELDS = []
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = []
 
-# class UserInfo(models.Model):
-#     user = models.OneToOneField(get_user_model(), on_delete=models.CASCADE, related_name='info')
-#     phone_number = models.CharField(max_length=15, blank=True, null=True)
-#     credit_card = models.CharField(max_length=16, blank=True, null=True)
+    def __str__(self):
+        return self.email
 
-#     def __str__(self):
-#         return f"{self.user.email}'s Info"
+class BlacklistedToken(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    token = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'token')
