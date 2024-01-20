@@ -46,7 +46,7 @@ class ArticleView(generics.CreateAPIView):
         return Response("Article created successfully", status=status.HTTP_200_OK)
 
 class CustomPagination(PageNumberPagination):
-    page_size = 1 # default page size
+    page_size = 6 # default page size
     max_page_size = 1000 # default max page size
     page_size_query_param = 'page_size' # if you want to dynamic items per page from request you must have to add it 
       

@@ -15,7 +15,7 @@ from rest_framework.authentication import SessionAuthentication, TokenAuthentica
 from rest_framework.authtoken.models import Token
 
 from .serializers import UserSerializer, TokenInputSerializer, LogoutSerializer
-# from .models import BlacklistedToken
+from .models import BlacklistedToken
 
 class RegisterView(generics.CreateAPIView):
     serializer_class = UserSerializer
