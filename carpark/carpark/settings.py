@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'sql_authentication',
     'map_markers',
     'article',
+    'operating_time',
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
     'rest_framework.authtoken',
