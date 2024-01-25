@@ -43,20 +43,29 @@ schema_view = get_schema_view(
 router = DefaultRouter()
 
 urlpatterns = [
+    # Admin
     path('admin/', admin.site.urls),
     path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('', include(router.urls)),
-    # path('auth/', include('sql_authentication.urls')),
-    path('map/', include('map_markers.urls')),
-    path('article/', include('article.urls')),
 
+    # User
     path('account/', include('account.urls')),
 
+    # User relations 
+    path('user/', include('user_park.urls')),
+
+    # Navigation
+    path('map/', include('map_markers.urls')),
+
+    # News
+    path('article/', include('article.urls')),
+
+    # Parking Lot
+    path('parking/', include('parking_lot.urls')),
     path('time/', include('operating_time.urls')),
 
-    path('parking/', include('parking_lot.urls')),
-
+    # Documentation
     path('api-auth/', include('rest_framework.urls')),
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),

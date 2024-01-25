@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'operating_time',
     'rest_framework',
     'parking_lot',
+    'user_park',
     'rest_framework_simplejwt.token_blacklist',
     'rest_framework.authtoken',
     'drf_yasg',
