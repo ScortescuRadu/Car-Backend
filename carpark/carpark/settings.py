@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'parking_lot',
     'user_park',
     'entrance',
+    'park_entrance',
     'rest_framework_simplejwt.token_blacklist',
     'rest_framework.authtoken',
     'drf_yasg',

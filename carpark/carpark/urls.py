@@ -65,6 +65,7 @@ urlpatterns = [
     path('parking/', include('parking_lot.urls')),
     path('time/', include('operating_time.urls')),
     path('entrance/', include('entrance.urls')),
+    path('parking/', include('park_entrance.urls')),
 
     # Documentation
     path('api-auth/', include('rest_framework.urls')),
