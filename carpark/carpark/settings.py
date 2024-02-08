@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'user_park',
     'entrance',
     'park_entrance',
+    'payments',
     'rest_framework_simplejwt.token_blacklist',
     'rest_framework.authtoken',
     'drf_yasg',
@@ -194,3 +195,7 @@ SIMPLE_JWT = {
 BASE_FRONTEND_URL = os.environ.get('DJANGO_BASE_FRONTEND_URL', default='http://localhost:3000')
 GOOGLE_OAUTH2_CLIENT_ID = os.environ.get('GOOGLE_OAUTH2_CLIENT_ID')
 GOOGLE_OAUTH2_CLIENT_SECRET = os.environ.get('GOOGLE_OAUTH2_CLIENT_SECRET')
+
+# Stripe
+STRIPE_SECRET_KEY = 'sk_test_51OgVJzLevPehYIou9TNWxRxzwD1GLGeo4jKYcXCO5wp59aCLuoBd6vsqQwANcnZVE0k4QwCuYm1b3oEuSz3NJYmf00qHRz9I8C'
+STRIPE_WEBHOOK_SECRET = 'whsec_1df94b8d85f08e7e123fb4cca22ada9b01d81a9b1818488325c8b9a2e3ed376a'
