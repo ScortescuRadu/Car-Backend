@@ -70,6 +70,9 @@ urlpatterns = [
     # Stripe
     path('payment/', include('payments.urls')),
 
+    # Profile
+    path('profile-picture/', include('profile_picture.urls')),
+
     # Documentation
     path('api-auth/', include('rest_framework.urls')),
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
