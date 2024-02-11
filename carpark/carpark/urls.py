@@ -69,6 +69,7 @@ urlpatterns = [
 
     # Stripe
     path('payment/', include('payments.urls')),
+    path('user-stripe/', include('user_stripe.urls')),
 
     # Profile
     path('profile-picture/', include('profile_picture.urls')),

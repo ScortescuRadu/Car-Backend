@@ -4,12 +4,16 @@ from rest_framework.response import Response
 from rest_framework import generics
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth.models import AnonymousUser
 from django.shortcuts import redirect
+from django.shortcuts import get_object_or_404
 from rest_framework.decorators import permission_classes
 from rest_framework.permissions import AllowAny
+from rest_framework.authentication import TokenAuthentication 
 from django.middleware.csrf import get_token
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views import View
+from user_stripe.models import UserStripe
 import json
 import stripe
 
@@ -29,17 +33,42 @@ class CSRFTokenView(View):
 
 
 class PaymentSheetView(View):
+    def get_user_from_token(self, request):
+        try:
+            # Extract user from the authentication token
+            user, _ = TokenAuthentication().authenticate(request)
+            return user
+        except Exception as e:
+            # Handle the case where the user is not found based on the token
+            print(f"Error retrieving user: {str(e)}")
+            return None
+
     def post(self, request, *args, **kwargs):
         # Assume you have a JSON payload with the necessary data
         data = json.loads(request.body)
 
         try:
-            # Create a new customer
-            customer = stripe.Customer.create()
+            print('try')
+            user = self.get_user_from_token(request)
+            user_stripe, created = UserStripe.objects.get_or_create(user=user)
+
+            # Use the existing stripe_customer if available
+            if user_stripe.stripe_customer:
+                customer_id = user_stripe.stripe_customer
+                print('yes')
+            else:
+                print('no')
+                # Create a new customer if stripe_customer_id is not available
+                customer = stripe.Customer.create()
+                customer_id = customer["id"]
+
+                # Update the UserStripe entry with the new stripe_customer_id
+                user_stripe.stripe_customer = customer_id
+                user_stripe.save()
 
             # Create an ephemeral key
             ephemeral_key = stripe.EphemeralKey.create(
-                customer=customer.id,
+                customer=customer_id,
                 stripe_version='2023-10-16',
             )
 
@@ -47,20 +76,21 @@ class PaymentSheetView(View):
             payment_intent = stripe.PaymentIntent.create(
                 amount=200,
                 currency='eur',
-                customer=customer['id'],
+                customer=customer_id,
             )
 
             # Return the necessary information in the response
             response_data = {
                 'paymentIntent': payment_intent.client_secret,
                 'ephemeralKey': ephemeral_key.secret,
-                'customer': customer.id,
+                'customer': customer_id,
                 'publishableKey': 'pk_test_51OgVJzLevPehYIouZmmqxgYdBsUpSCEAFopmpN4idvlaZzi4665AuXJRlnpX0p1mGKoP6VkDWLOfSt8OvlAc9Tt400bHgGIYUf'
             }
 
             return JsonResponse(response_data, status=200)
 
         except Exception as e:
+            print('Exception:', str(e))
             # Handle exceptions appropriately
             return JsonResponse({'error': str(e)}, status=500)
 
