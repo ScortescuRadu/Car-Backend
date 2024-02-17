@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from rest_framework import viewsets
 from .models import Article
-from .serializers import ArticleSerializer, ArticlesListSerializer
+from .serializers import ArticleSerializer, ArticlesListSerializer, MainArticlesListSerializer
 from rest_framework.views import APIView
 from rest_framework import generics, status
 from rest_framework.response import Response
@@ -34,6 +34,8 @@ class ArticleView(generics.CreateAPIView):
 
         latitude = float(latitude) if latitude else None
         longitude = float(request.data['longitude']) if longitude else None
+
+        topic = request.data.get('topic')
 
         is_featured = bool(request.data.get('is_featured', False))
 
@@ -75,7 +77,7 @@ class ArticleListView(generics.ListAPIView):
     serializer_class = ArticlesListSerializer
     pagination_class = CustomPagination
 
-# GET all Articles
+# GET Article details
 class ArticleDetailsView(generics.RetrieveAPIView):
     queryset = Article.objects.filter(is_featured=True)
     serializer_class = ArticlesListSerializer
@@ -90,5 +92,16 @@ class ArticleDetailsView(generics.RetrieveAPIView):
         except:
             articles = self.get_queryset()
             serializer = ArticleSerializer(articles, many=True)
+
+        return Response(serializer.data)
+
+# GET most recent articles
+class LatestArticleView(generics.RetrieveAPIView):
+    queryset = Article.objects.filter(is_featured=True).order_by('-timestamp')[:5]
+    serializer_class = MainArticlesListSerializer
+
+    def get(self, request, *args, **kwargs):
+        articles = self.get_queryset()
+        serializer = MainArticlesListSerializer(articles, many=True)
 
         return Response(serializer.data)
