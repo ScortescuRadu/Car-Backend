@@ -54,6 +54,7 @@ urlpatterns = [
 
     # User relations 
     path('user/', include('user_park.urls')),
+    path('user-profile/', include('user_profile.urls')),
 
     # Navigation
     path('map/', include('map_markers.urls')),
