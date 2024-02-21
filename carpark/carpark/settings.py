@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'profile_picture',
     'user_stripe',
     'parking_invoice',
+    'article_comment',
     'rest_framework_simplejwt.token_blacklist',
     'rest_framework.authtoken',
     'drf_yasg',

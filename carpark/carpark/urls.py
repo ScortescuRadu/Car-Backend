@@ -60,6 +60,7 @@ urlpatterns = [
 
     # News
     path('article/', include('article.urls')),
+    path('comment/', include('article_comment.urls')),
 
     # Parking Lot
     path('parking/', include('parking_lot.urls')),
