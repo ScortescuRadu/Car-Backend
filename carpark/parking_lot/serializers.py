@@ -4,18 +4,28 @@ from .models import ParkingLot
 class ParkingLotSerializer(serializers.ModelSerializer):
     class Meta:
         model = ParkingLot
-        fields = ['price', 'capacity']
+        fields = ['price', 'capacity', 'iban', 'phone_number', 'weekday_opening_time',
+        'weekday_closing_time', 'weekend_opening_time', 'weekend_closing_time', 'street_address']
 
+class TestParkingLotSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ParkingLot
+        fields = '__all__'
+
+class StreetAddressSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ParkingLot
+        fields = ['street_address']
 
 class UserParkingLotSerializer(serializers.ModelSerializer):
     token = serializers.CharField(write_only=True)
 
     class Meta:
         model = ParkingLot
-        fields = ['token', 'price', 'capacity']
+        fields = ['token', 'price', 'capacity', 'iban', 'phone_number', 'weekday_opening_time',
+        'weekday_closing_time', 'weekend_opening_time', 'weekend_closing_time', 'street_address']
 
     def create(self, validated_data):
-        # Extract the token from validated data and remove it
         token = validated_data.pop('token', None)
 
         user_id = Token.objects.get(key=token).user_id
@@ -24,10 +34,8 @@ class UserParkingLotSerializer(serializers.ModelSerializer):
         if not user:
             raise serializers.ValidationError('Invalid token')
 
-        # Create a new ParkingLot instance
         parking_lot = ParkingLot.objects.create(**validated_data)
 
-        # Your logic to create a UserPark entry
         create_user_park_entry(user, parking_lot)
 
         return parking_lot
