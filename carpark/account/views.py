@@ -13,6 +13,7 @@ from .models import User
 from rest_framework.authtoken.models import Token
 from rest_framework.authentication import SessionAuthentication, TokenAuthentication
 from rest_framework.authtoken.models import Token
+from django.middleware.csrf import get_token
 
 from .serializers import UserSerializer, TokenInputSerializer, LogoutSerializer
 from .models import BlacklistedToken
@@ -102,3 +103,13 @@ class LogoutView(generics.CreateAPIView):
             'message': 'Logout successful. Token blacklisted.'
         }
         return Response(response_data, status=status.HTTP_200_OK)
+
+class CSRFTokenView(APIView):
+    """
+    API View to retrieve a CSRF token.
+    """
+
+    def get(self, request, *args, **kwargs):
+        # get_token(request) generates or retrieves a CSRF token
+        csrf_token = get_token(request)
+        return Response({'csrfToken': csrf_token})

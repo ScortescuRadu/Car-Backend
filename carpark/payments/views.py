@@ -14,6 +14,7 @@ from django.middleware.csrf import get_token
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views import View
 from user_stripe.models import UserStripe
+from rest_framework import status
 import json
 import stripe
 
@@ -154,3 +155,28 @@ class WebHookView(APIView):
       print('Unhandled event type {}'.format(event.type))
 
     return JsonResponse(success=True, safe=False)
+
+
+# WebViews
+class CreateWebCheckoutSessionView(APIView):
+    def post(self, request, *args, **kwargs):
+        try:
+            checkout_session = stripe.checkout.Session.create(
+                payment_method_types=['card'],
+                line_items=[{
+                    'price_data': {
+                        'currency': 'eur',
+                        'product_data': {
+                            'name': 'T-shirt',
+                        },
+                        'unit_amount': 2000,
+                    },
+                    'quantity': 1,
+                }],
+                mode='payment',
+                success_url=request.build_absolute_uri('/') + '?success=true',
+                cancel_url=request.build_absolute_uri('/') + '?cancel=true',
+            )
+            return JsonResponse({'url': checkout_session.url})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
