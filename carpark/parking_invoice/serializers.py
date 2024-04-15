@@ -39,3 +39,17 @@ class ParkingInvoiceOutputSerializer(serializers.ModelSerializer):
         hours_spent = time_difference.total_seconds() / 3600
         # Round the hours and ensure a minimum of 1 hour
         return max(round(hours_spent), 1)
+
+
+class PriceCalculationInputSerializer(serializers.Serializer):
+    license_plate = serializers.CharField(max_length=255)
+    timestamp = serializers.DateTimeField()
+
+    def validate_timestamp(self, value):
+        """Ensure the timestamp is in the past."""
+        if value > timezone.now():
+            raise serializers.ValidationError("Timestamp cannot be in the future.")
+        return value
+
+class PriceOutputSerializer(serializers.Serializer):
+    price = serializers.DecimalField(max_digits=10, decimal_places=2)

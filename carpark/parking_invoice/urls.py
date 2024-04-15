@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import ParkingInvoiceCreateView, UnpaidInvoicesListView, PaidInvoicesListView, ParkingInvoiceCountView, UnpaidInvoicesByLicensePlateView
+from .views import ParkingInvoiceCreateView, UnpaidInvoicesListView, PaidInvoicesListView, ParkingInvoiceCountView, UnpaidInvoicesByLicensePlateView, CalculatePriceView
 
 urlpatterns = [
     # Other URL patterns
@@ -8,4 +8,5 @@ urlpatterns = [
     path('paid/', PaidInvoicesListView.as_view(), name='paid_invoices_list'),
     path('count/', ParkingInvoiceCountView.as_view(), name='count_existing_invoices'),
     path('license/unpaid/', UnpaidInvoicesByLicensePlateView.as_view(), name='unpaid-invoices-by-license'),
+    path('calculate-price/', CalculatePriceView.as_view(), name='calculate_price'),
 ]

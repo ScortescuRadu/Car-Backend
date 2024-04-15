@@ -3,13 +3,15 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import TokenAuthentication 
 from django.middleware.csrf import get_token
 from .models import ParkingInvoice
-from .serializers import ParkingInvoiceSerializer, LicensePlateSerializer, ParkingInvoiceOutputSerializer
+from .serializers import ParkingInvoiceSerializer, LicensePlateSerializer, ParkingInvoiceOutputSerializer, PriceCalculationInputSerializer, PriceOutputSerializer
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import generics
 from datetime import timedelta
 from django.utils import timezone
 from django.http import Http404
+from decimal import Decimal
+from rest_framework.generics import GenericAPIView
 
 # Create your views here.
 
@@ -152,3 +154,23 @@ class UnpaidInvoicesByLicensePlateView(generics.ListAPIView):
         if self.request.method.lower() == 'post':
             return LicensePlateSerializer
         return ParkingInvoiceOutputSerializer  # Default to output serializer for any other methods
+
+
+class CalculatePriceView(GenericAPIView):
+    serializer_class = PriceCalculationInputSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            license_plate = serializer.validated_data['license_plate']
+            timestamp = serializer.validated_data['timestamp']
+            try:
+                invoice = ParkingInvoice.objects.filter(license_plate=license_plate, is_paid=False).first()
+                time_difference = timezone.now() - timestamp
+                hours_spent = max(round(time_difference.total_seconds() / 3600), 1)
+                price = Decimal(invoice.hourly_price * hours_spent).quantize(Decimal('0.01'))
+                output_serializer = PriceOutputSerializer({'price': price})
+                return Response(output_serializer.data, status=status.HTTP_200_OK)
+            except ParkingInvoice.DoesNotExist:
+                return Response({'error': "No unpaid invoice found for this license plate."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
