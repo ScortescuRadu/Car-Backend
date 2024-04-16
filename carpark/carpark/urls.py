@@ -69,6 +69,9 @@ urlpatterns = [
     path('entrance/', include('entrance.urls')),
     path('parking/', include('park_entrance.urls')),
 
+    # City
+    path('city/', include('city.urls')),
+
     # Stripe
     path('payment/', include('payments.urls')),
     path('user-stripe/', include('user_stripe.urls')),

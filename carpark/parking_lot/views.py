@@ -3,7 +3,8 @@ from rest_framework import viewsets, status
 from rest_framework import generics
 from .models import ParkingLot
 from user_park.models import UserPark
-from .serializers import ParkingLotSerializer, UserParkingLotSerializer, UserParkInputSerializer, UserParkOutputSerializer, TestParkingLotSerializer, StreetAddressSerializer
+from city.models import City
+from .serializers import ParkingLotSerializer, UserParkingLotSerializer, UserParkInputSerializer, UserParkOutputSerializer, TestParkingLotSerializer, StreetAddressSerializer, CityNameSerializer
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import get_user_model
 from rest_framework.response import Response
@@ -31,6 +32,39 @@ class ParkingLotRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView)
     queryset = ParkingLot.objects.all()
     serializer_class = ParkingLotSerializer
     lookup_field = 'id'
+
+
+class ParkingLotByCityView(generics.ListAPIView):
+    serializer_class_input = CityNameSerializer
+    serializer_class_output = StreetAddressSerializer
+
+    def get_serializer_class(self):
+        # This method dynamically selects a serializer class based on the HTTP method
+        if self.request.method == 'POST':
+            return self.serializer_class_input
+        elif self.request.method == 'GET':
+            return self.serializer_class_output
+        return super().get_serializer_class()
+
+    def get_queryset(self):
+        # Since we do not use GET for listing in this view, we return an empty queryset
+        return ParkingLot.objects.none()
+
+    def post(self, request, *args, **kwargs):
+        # Correct use of class attribute with `self`
+        input_serializer = self.get_serializer(data=request.data)  # This will call get_serializer_class
+        if input_serializer.is_valid():
+            city_name = input_serializer.validated_data['city_name']
+            try:
+                city = City.objects.get(name__iexact=city_name)  # Case-insensitive search for city name
+            except City.DoesNotExist:
+                raise NotFound(detail=f"City with name {city_name} does not exist.")
+            
+            parking_lots = ParkingLot.objects.filter(city=city, street_address__isnull=False)
+            output_serializer = self.serializer_class_output(parking_lots, many=True)  # Use class attribute with `self`
+            return Response(output_serializer.data)
+        else:
+            raise ValidationError(input_serializer.errors)
 
 
 class UserStreetAddressListView(generics.ListAPIView):

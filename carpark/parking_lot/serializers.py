@@ -7,15 +7,22 @@ class ParkingLotSerializer(serializers.ModelSerializer):
         fields = ['price', 'capacity', 'iban', 'phone_number', 'weekday_opening_time',
         'weekday_closing_time', 'weekend_opening_time', 'weekend_closing_time', 'street_address']
 
+
 class TestParkingLotSerializer(serializers.ModelSerializer):
     class Meta:
         model = ParkingLot
         fields = '__all__'
 
+
 class StreetAddressSerializer(serializers.ModelSerializer):
     class Meta:
         model = ParkingLot
         fields = ['street_address']
+
+
+class CityNameSerializer(serializers.Serializer):
+    city_name = serializers.CharField(max_length=255)
+
 
 class UserParkingLotSerializer(serializers.ModelSerializer):
     token = serializers.CharField(write_only=True)
@@ -43,6 +50,7 @@ class UserParkingLotSerializer(serializers.ModelSerializer):
 
 class UserParkInputSerializer(serializers.Serializer):
     token = serializers.CharField()
+
 
 class UserParkOutputSerializer(serializers.ModelSerializer):
     class Meta:

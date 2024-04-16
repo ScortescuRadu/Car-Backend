@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     'article_comment',
     'user_profile',
     'spot_detection',
+    'city',
     'rest_framework_simplejwt.token_blacklist',
     'rest_framework.authtoken',
     'drf_yasg',

@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import ParkingLotListCreateView, ParkingLotRetrieveUpdateDestroyView, ParkingLotAddViewSet, UserParkingLotsView, TestParkingLotAddView, UserStreetAddressListView
+from .views import ParkingLotListCreateView, ParkingLotRetrieveUpdateDestroyView, ParkingLotAddViewSet, UserParkingLotsView, TestParkingLotAddView, UserStreetAddressListView, ParkingLotByCityView
 
 urlpatterns = [
     path('parking-lot/', ParkingLotListCreateView.as_view(), name='parking-lots-list-create'),
@@ -8,4 +8,5 @@ urlpatterns = [
     path('parking-lot/<int:id>/', ParkingLotRetrieveUpdateDestroyView.as_view(), name='parking-lot-detail'),
     path('user-parking/', ParkingLotAddViewSet.as_view(), name='parking-lot-detail'),
     path('user-parking-lots/', UserParkingLotsView.as_view(), name='parking-lot-detail'),
+    path('parking-lots/by-city/', ParkingLotByCityView.as_view(), name='parking-lots-by-city'),
 ]

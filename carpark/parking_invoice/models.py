@@ -14,7 +14,7 @@ class ParkingInvoice(models.Model):
     is_paid = models.BooleanField(default=False)
     final_cost = models.DecimalField(default=0, max_digits=8, decimal_places=2)
     license_plate = models.CharField(max_length=255, default="")
-    reserved_time = models.PositiveIntegerField(default=0)  # in hours
+    reserved_time = models.BooleanField(default=False)
 
     def __str__(self):
         return f"Invoice for User ID: {self.user_id} at Parking Lot ID: {self.parking_lot_id}"
