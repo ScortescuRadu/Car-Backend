@@ -31,7 +31,6 @@ class TaskStatusConsumer(AsyncWebsocketConsumer):
     async def task_message(self, event):
         message = event['message']
         content = event.get('content', [])
-        print(event)
 
         # Send message to WebSocket
         await self.send(text_data=json.dumps({
