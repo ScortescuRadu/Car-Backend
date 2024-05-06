@@ -1,5 +1,17 @@
 from django.urls import path
-from .views import ParkingLotListCreateView, ParkingLotRetrieveUpdateDestroyView, ParkingLotAddViewSet, UserParkingLotsView, TestParkingLotAddView, UserStreetAddressListView, ParkingLotByCityView
+from .views import (ParkingLotListCreateView,
+    ParkingLotRetrieveUpdateDestroyView,
+    ParkingLotAddViewSet,
+    UserParkingLotsView,
+    TestParkingLotAddView,
+    UserStreetAddressListView,
+    ParkingLotByCityView,
+    UserParkingLotDataView,
+    ParkingLotEditPrice,
+    ParkingLotEditPhone,
+    ParkingLotEditTimes,
+    ParkingLotEditCapacity,
+    ParkingLotEditAddress)
 
 urlpatterns = [
     path('parking-lot/', ParkingLotListCreateView.as_view(), name='parking-lots-list-create'),
@@ -9,4 +21,10 @@ urlpatterns = [
     path('user-parking/', ParkingLotAddViewSet.as_view(), name='parking-lot-detail'),
     path('user-parking-lots/', UserParkingLotsView.as_view(), name='parking-lot-detail'),
     path('parking-lots/by-city/', ParkingLotByCityView.as_view(), name='parking-lots-by-city'),
+    path('lot-details/', UserParkingLotDataView.as_view(), name='parking-lot-details'),
+    path('price-update/', ParkingLotEditPrice.as_view(), name='price-update'),
+    path('phone-update/', ParkingLotEditPhone.as_view(), name='phone-update'),
+    path('times-update/', ParkingLotEditTimes.as_view(), name='times-update'),
+    path('capacity-update/', ParkingLotEditCapacity.as_view(), name='capacity-update'),
+    path('address-update/', ParkingLotEditAddress.as_view(), name='address-update'),
 ]

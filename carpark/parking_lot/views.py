@@ -4,7 +4,19 @@ from rest_framework import generics
 from .models import ParkingLot
 from user_park.models import UserPark
 from city.models import City
-from .serializers import ParkingLotSerializer, UserParkingLotSerializer, UserParkInputSerializer, UserParkOutputSerializer, TestParkingLotSerializer, StreetAddressSerializer, CityNameSerializer
+from .serializers import (ParkingLotSerializer,
+    UserParkingLotSerializer,
+    UserParkInputSerializer,
+    UserParkOutputSerializer,
+    TestParkingLotSerializer,
+    StreetAddressSerializer,
+    CityNameSerializer,
+    UserParkAddressInputSerializer,
+    ParkPriceUpdateSerializer,
+    ParkPhoneUpdateSerializer,
+    ParkTimesUpdateSerializer,
+    ParkCapacityUpdateSerializer,
+    ParkAddressUpdateSerializer)
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import get_user_model
 from rest_framework.response import Response
@@ -197,6 +209,245 @@ class UserParkingLotsView(generics.ListAPIView):
             serializer_output = self.serializer_class_output(parking_lots, many=True)
 
             return Response(serializer_output.data)
+
+        except Exception as e:
+            # Log the exception for debugging purposes
+            print(f"An unexpected error occurred: {str(e)}")
+            return Response({'error': 'An unexpected error occurred'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class UserParkingLotDataView(generics.ListAPIView):
+    serializer_class_input = UserParkAddressInputSerializer
+    serializer_class_output = UserParkOutputSerializer
+
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return self.serializer_class_input
+        elif self.request.method == 'GET':
+            return self.serializer_class_output
+        return super().get_serializer_class()
+
+    def get_queryset(self):
+        return UserPark.objects.none()  # Empty queryset as this is not used for POST requests
+
+    def post(self, request, *args, **kwargs):
+        try:
+            serializer_input = self.serializer_class_input(data=request.data)
+            serializer_input.is_valid(raise_exception=True)
+
+            user_token = serializer_input.validated_data['token']
+            street_address = serializer_input.validated_data['street_address']
+
+            if not user_token:
+                return Response({'error': 'Token not provided'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Validate the user ID from the token
+            try:
+                user_id = Token.objects.get(key=user_token).user_id
+            except Token.DoesNotExist:
+                return Response({'error': 'Invalid token'}, status=status.HTTP_401_UNAUTHORIZED)
+
+            # Retrieve the ParkingLot corresponding to the street address
+            try:
+                parking_lot = ParkingLot.objects.get(street_address=street_address)
+            except ParkingLot.DoesNotExist:
+                raise NotFound("Parking lot not found for the provided street address")
+
+            # Return the ParkingLot details
+            serializer_output = self.serializer_class_output(parking_lot)
+            return Response(serializer_output.data)
+
+        except Exception as e:
+            # Log the exception for debugging purposes
+            print(f"An unexpected error occurred: {str(e)}")
+            return Response({'error': 'An unexpected error occurred'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ParkingLotEditPrice(generics.CreateAPIView):
+    queryset = ParkingLot.objects.all()
+    serializer_class = ParkPriceUpdateSerializer
+
+    def create(self, request, *args, **kwargs):
+        try:
+            user_token = request.data.get('token')
+            price = request.data.get('price')
+            street_address = request.data.get('street_address')
+
+            # Extract the user ID from the token
+            try:
+                user_id = Token.objects.get(key=user_token).user_id
+            except Token.DoesNotExist:
+                return Response({'error': f'Invalid token {user_token}'}, status=status.HTTP_401_UNAUTHORIZED)
+
+            # Retrieve the ParkingLot corresponding to the street address
+            try:
+                parking_lot = ParkingLot.objects.get(street_address=street_address)
+            except ParkingLot.DoesNotExist:
+                raise NotFound("Parking lot not found for the provided street address")
+
+            # Update the price of the parking lot
+            parking_lot.price = price
+            parking_lot.save()
+
+            return Response({'message': 'Parking lot price changed successfully'}, status=status.HTTP_201_CREATED)
+
+        except ValueError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            # Log the exception for debugging purposes
+            print(f"An unexpected error occurred: {str(e)}")
+            return Response({'error': 'An unexpected error occurred'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ParkingLotEditPhone(generics.CreateAPIView):
+    queryset = ParkingLot.objects.all()
+    serializer_class = ParkPhoneUpdateSerializer
+
+    def create(self, request, *args, **kwargs):
+        try:
+            user_token = request.data.get('token')
+            phone = request.data.get('phone')
+            street_address = request.data.get('street_address')
+
+            # Extract the user ID from the token
+            try:
+                user_id = Token.objects.get(key=user_token).user_id
+            except Token.DoesNotExist:
+                return Response({'error': f'Invalid token {user_token}'}, status=status.HTTP_401_UNAUTHORIZED)
+
+            # Retrieve the ParkingLot corresponding to the street address
+            try:
+                parking_lot = ParkingLot.objects.get(street_address=street_address)
+            except ParkingLot.DoesNotExist:
+                raise NotFound("Parking lot not found for the provided street address")
+
+            # Update the phone number of the parking lot
+            parking_lot.phone_number = phone
+            parking_lot.save()
+
+            return Response({'message': 'Parking lot phone number changed successfully'}, status=status.HTTP_201_CREATED)
+
+        except ValueError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            # Log the exception for debugging purposes
+            print(f"An unexpected error occurred: {str(e)}")
+            return Response({'error': 'An unexpected error occurred'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ParkingLotEditTimes(generics.CreateAPIView):
+    queryset = ParkingLot.objects.all()
+    serializer_class = ParkTimesUpdateSerializer
+
+    def create(self, request, *args, **kwargs):
+        try:
+            user_token = request.data.get('token')
+            times = request.data.get('times')
+            street_address = request.data.get('street_address')
+
+            # Extract the user ID from the token
+            try:
+                user_id = Token.objects.get(key=user_token).user_id
+            except Token.DoesNotExist:
+                return Response({'error': f'Invalid token {user_token}'}, status=status.HTTP_401_UNAUTHORIZED)
+
+            # Retrieve the ParkingLot corresponding to the street address
+            try:
+                parking_lot = ParkingLot.objects.get(street_address=street_address)
+            except ParkingLot.DoesNotExist:
+                raise NotFound("Parking lot not found for the provided street address")
+
+            # Update the opening and closing times of the parking lot
+            parking_lot.weekday_opening_time = times.get('weekdayOpening')
+            parking_lot.weekday_closing_time = times.get('weekdayClosing')
+            parking_lot.weekend_opening_time = times.get('weekendOpening')
+            parking_lot.weekend_closing_time = times.get('weekendClosing')
+            parking_lot.save()
+
+            return Response({'message': 'Parking lot times changed successfully'}, status=status.HTTP_201_CREATED)
+
+        except ValueError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            # Log the exception for debugging purposes
+            print(f"An unexpected error occurred: {str(e)}")
+            return Response({'error': 'An unexpected error occurred'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ParkingLotEditCapacity(generics.CreateAPIView):
+    queryset = ParkingLot.objects.all()
+    serializer_class = ParkCapacityUpdateSerializer
+
+    def create(self, request, *args, **kwargs):
+        try:
+            user_token = request.data.get('token')
+            capacity = request.data.get('capacity')
+            street_address = request.data.get('street_address')
+
+            # Extract the user ID from the token
+            try:
+                user_id = Token.objects.get(key=user_token).user_id
+            except Token.DoesNotExist:
+                return Response({'error': f'Invalid token {user_token}'}, status=status.HTTP_401_UNAUTHORIZED)
+
+            # Retrieve the ParkingLot corresponding to the street address
+            try:
+                parking_lot = ParkingLot.objects.get(street_address=street_address)
+            except ParkingLot.DoesNotExist:
+                raise NotFound("Parking lot not found for the provided street address")
+
+            # Update the capacity of the parking lot
+            parking_lot.capacity = capacity
+            parking_lot.save()
+
+            return Response({'message': 'Parking lot capacity changed successfully'}, status=status.HTTP_201_CREATED)
+
+        except ValueError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            # Log the exception for debugging purposes
+            print(f"An unexpected error occurred: {str(e)}")
+            return Response({'error': 'An unexpected error occurred'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ParkingLotEditAddress(generics.CreateAPIView):
+    queryset = ParkingLot.objects.all()
+    serializer_class = ParkAddressUpdateSerializer
+
+    def create(self, request, *args, **kwargs):
+        try:
+            user_token = request.data.get('token')
+            new_address = request.data.get('new_address')
+            new_latitude = request.data.get('new_latitude')
+            new_longitude = request.data.get('new_longitude')
+            street_address = request.data.get('street_address')
+
+            # Extract the user ID from the token
+            try:
+                user_id = Token.objects.get(key=user_token).user_id
+            except Token.DoesNotExist:
+                return Response({'error': f'Invalid token {user_token}'}, status=status.HTTP_401_UNAUTHORIZED)
+
+            # Retrieve the ParkingLot corresponding to the street address
+            try:
+                parking_lot = ParkingLot.objects.get(street_address=street_address)
+            except ParkingLot.DoesNotExist:
+                raise NotFound("Parking lot not found for the provided street address")
+
+            # Update the address of the parking lot
+            parking_lot.street_address = new_address
+            parking_lot.latitude = new_latitude
+            parking_lot.longitude = new_longitude
+            parking_lot.save()
+
+            return Response({'message': 'Parking lot address changed successfully'}, status=status.HTTP_201_CREATED)
+
+        except ValueError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         except Exception as e:
             # Log the exception for debugging purposes

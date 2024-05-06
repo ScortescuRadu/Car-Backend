@@ -56,3 +56,32 @@ class UserParkOutputSerializer(serializers.ModelSerializer):
     class Meta:
         model = ParkingLot
         fields = '__all__'
+
+
+class UserParkAddressInputSerializer(serializers.Serializer):
+    token = serializers.CharField()
+    street_address = serializers.CharField()
+
+
+class ParkPriceUpdateSerializer(serializers.Serializer):
+    price = serializers.CharField()
+
+
+class ParkPhoneUpdateSerializer(serializers.Serializer):
+    phone = serializers.CharField()
+
+
+class ParkTimesUpdateSerializer(serializers.Serializer):
+    weekdayOpening = serializers.TimeField(allow_null=True)
+    weekdayClosing = serializers.TimeField(allow_null=True)
+    weekendOpening = serializers.TimeField(allow_null=True)
+    weekendClosing = serializers.TimeField(allow_null=True)
+
+
+class ParkCapacityUpdateSerializer(serializers.Serializer):
+    capacity = serializers.IntegerField()
+
+class ParkAddressUpdateSerializer(serializers.Serializer):
+    new_address = serializers.IntegerField()
+    new_latitude = serializers.IntegerField()
+    new_longitude = serializers.IntegerField()
