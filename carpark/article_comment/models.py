@@ -10,3 +10,8 @@ class Comment(models.Model):
     content = models.TextField()
     timestamp = models.DateTimeField(auto_now_add=True)
     parent_comment = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE)
+    likes = models.IntegerField(default=0)
+    dislikes = models.IntegerField(default=0)
+
+    def __str__(self):
+        return f"Comment {self.user}"
