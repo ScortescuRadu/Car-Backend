@@ -12,6 +12,8 @@ class Comment(models.Model):
     parent_comment = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE)
     likes = models.IntegerField(default=0)
     dislikes = models.IntegerField(default=0)
+    liked_users = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='liked_comments')
+    disliked_users = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='disliked_comments')
 
     def __str__(self):
         return f"Comment {self.user}"

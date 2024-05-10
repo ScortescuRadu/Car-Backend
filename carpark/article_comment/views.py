@@ -8,6 +8,7 @@ from article.models import Article
 from rest_framework.authtoken.models import Token
 from rest_framework import status
 from django.shortcuts import get_object_or_404
+from rest_framework.decorators import api_view
 
 # Create your views here.
 
@@ -59,25 +60,66 @@ class CommentListByArticleView(generics.ListAPIView):
 
 class CommentLikeAPIView(APIView):
     def post(self, request, pk):
-        comment = Comment.objects.get(pk=pk)
-        if 'like' in request.data:
-            if request.data['like']:
-                comment.likes += 1
-            else:
-                comment.likes = max(comment.likes - 1, 0)
-        comment.save()
-        serializer = CommentLikeDislikeSerializer(comment)
-        return Response(serializer.data)
+        try:
+            comment = Comment.objects.get(pk=pk)
 
+            user_token = self.request.data.get('access_token')
+            user = self.request.user if self.request.user.is_authenticated else None
+            if user is None and user_token:
+                try:
+                    user = Token.objects.get(key=user_token).user
+                except Token.DoesNotExist:
+                    return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+            # Check current like status
+            if user in comment.liked_users.all():
+                # User is removing their like
+                comment.liked_users.remove(user)
+                comment.likes -= 1
+            else:
+                # User is adding a like
+                comment.liked_users.add(user)
+                comment.likes += 1
+                # Remove dislike if it exists
+                if user in comment.disliked_users.all():
+                    comment.disliked_users.remove(user)
+                    comment.dislikes -= 1
+
+            comment.save()
+            serializer = CommentLikeDislikeSerializer(comment)
+            return Response(serializer.data)
+        except Comment.DoesNotExist:
+            return Response({"message": "Comment not found"}, status=status.HTTP_404_NOT_FOUND)
 
 class CommentDislikeAPIView(APIView):
     def post(self, request, pk):
-        comment = Comment.objects.get(pk=pk)
-        if 'dislike' in request.data:
-            if request.data['dislike']:
-                comment.dislikes += 1
+        try:
+            comment = Comment.objects.get(pk=pk)
+
+            user_token = self.request.data.get('access_token')
+            user = self.request.user if self.request.user.is_authenticated else None
+            if user is None and user_token:
+                try:
+                    user = Token.objects.get(key=user_token).user
+                except Token.DoesNotExist:
+                    return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+            # Check current dislike status
+            if user in comment.disliked_users.all():
+                # User is removing their dislike
+                comment.disliked_users.remove(user)
+                comment.dislikes -= 1
             else:
-                comment.dislikes = max(comment.dislikes - 1, 0)
-        comment.save()
-        serializer = CommentLikeDislikeSerializer(comment)
-        return Response(serializer.data)
+                # User is adding a dislike
+                comment.disliked_users.add(user)
+                comment.dislikes += 1
+                # Remove like if it exists
+                if user in comment.liked_users.all():
+                    comment.liked_users.remove(user)
+                    comment.likes -= 1
+
+            comment.save()
+            serializer = CommentLikeDislikeSerializer(comment)
+            return Response(serializer.data)
+        except Comment.DoesNotExist:
+            return Response({"message": "Comment not found"}, status=status.HTTP_404_NOT_FOUND)
