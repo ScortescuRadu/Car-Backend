@@ -25,8 +25,7 @@ class CommentCreateView(generics.CreateAPIView):
                 user = Token.objects.get(key=user_token).user
             except Token.DoesNotExist:
                 return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-        print('aha')
-        print(user)
+
         article_id = self.request.data.get('article_id')
         try:
             article = Article.objects.get(pk=article_id)
@@ -50,13 +49,25 @@ class CommentCreateView(generics.CreateAPIView):
         serializer.save(user=user, article_id=article_id, parent_comment_id=parent_comment_id)
 
 
-class CommentListByArticleView(generics.ListAPIView):
+class CommentListByArticleView(APIView):
     serializer_class = CommentSerializer
 
-    def get_queryset(self):
+    def post(self, request, *args, **kwargs):
         article_id = self.kwargs['article_id']
-        return Comment.objects.filter(article_id=article_id)
+        user_token = self.request.data.get('access_token')
+        user = self.request.user if self.request.user.is_authenticated else None
+        if user is None and user_token:
+            try:
+                user = Token.objects.get(key=user_token).user
+            except Token.DoesNotExist:
+                user = None
+                print('User not found')
 
+        comments = Comment.objects.filter(article_id=article_id)
+        context = {'request': request, 'user': user}
+        serializer = CommentSerializer(comments, many=True, context=context)
+        
+        return Response(serializer.data)
 
 class CommentLikeAPIView(APIView):
     def post(self, request, pk):

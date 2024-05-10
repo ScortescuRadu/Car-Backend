@@ -3,9 +3,20 @@ from .models import Comment
 from article.models import Article
 
 class CommentSerializer(serializers.ModelSerializer):
+    is_liked = serializers.SerializerMethodField()
+    is_disliked = serializers.SerializerMethodField()
+
     class Meta:
         model = Comment
-        fields = ['id', 'user', 'article', 'content', 'timestamp', 'parent_comment', 'likes', 'dislikes']
+        fields = ['id', 'user', 'article', 'content', 'timestamp', 'parent_comment', 'likes', 'dislikes', 'is_liked', 'is_disliked']
+
+    def get_is_liked(self, obj):
+        user = self.context.get('user')
+        return obj.liked_users.filter(id=user.id).exists() if user and not user.is_anonymous else False
+
+    def get_is_disliked(self, obj):
+        user = self.context.get('user')
+        return obj.disliked_users.filter(id=user.id).exists() if user and not user.is_anonymous else False
 
 
 class NewCommentSerializer(serializers.ModelSerializer):
