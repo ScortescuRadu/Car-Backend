@@ -3,7 +3,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import TokenAuthentication 
 from django.middleware.csrf import get_token
 from .models import ParkingInvoice
-from .serializers import ParkingInvoiceSerializer, LicensePlateSerializer, ParkingInvoiceOutputSerializer, PriceCalculationInputSerializer, PriceOutputSerializer
+from .serializers import ParkingInvoiceSerializer, LicensePlateSerializer, ParkingInvoiceOutputSerializer, PriceCalculationInputSerializer, PriceOutputSerializer, ParkingInvoiceReservationSerializer
+from user_profile.models import UserProfile
+from parking_lot.models import ParkingLot
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import generics
@@ -12,6 +14,8 @@ from django.utils import timezone
 from django.http import Http404
 from decimal import Decimal
 from rest_framework.generics import GenericAPIView
+from rest_framework.authtoken.models import Token
+import json
 
 # Create your views here.
 
@@ -29,19 +33,14 @@ class ParkingInvoiceCreateView(generics.CreateAPIView):
             return None
 
     def perform_create(self, serializer):
-        print('ha')
         user = self.get_user_from_token(self.request)
-        print(user)
-        print(user.id)
         user_id = user.id if user else None
 
         # Set additional fields before saving
         serializer.save(user_id=user_id, timestamp=timezone.now(), is_paid=False)
 
     def create(self, request, *args, **kwargs):
-        print('aha')
         user = self.get_user_from_token(request)
-        print(user)
 
         if user is None:
             # Handle the case where the user is not found based on the token
@@ -72,16 +71,19 @@ class UnpaidInvoicesListView(generics.ListAPIView):
 
     def get_queryset(self):
         user = self.get_user_from_token(self.request)
-        user_id = user.id if user else None
-        unpaid_invoices = ParkingInvoice.objects.filter(user_id=user_id, is_paid=False)
+        if user is None:
+            return ParkingInvoice.objects.none()
 
-        # Update time_spent for each invoice
+        unpaid_invoices = ParkingInvoice.objects.filter(
+            user_id=user.id, 
+            is_paid=False
+        ).select_related('parking_lot')
+
+        # Calculate time spent for each invoice on the fly and do not save it
         current_timestamp = timezone.now()
-        print(current_timestamp)
         for invoice in unpaid_invoices:
-            time_spent = (current_timestamp - invoice.timestamp).total_seconds() / 3600  # Convert to hours
+            time_spent = (current_timestamp - invoice.timestamp).total_seconds() / 3600
             invoice.time_spent = time_spent
-            invoice.save()
 
         return unpaid_invoices
 
@@ -174,3 +176,52 @@ class CalculatePriceView(GenericAPIView):
             except ParkingInvoice.DoesNotExist:
                 return Response({'error': "No unpaid invoice found for this license plate."}, status=status.HTTP_404_NOT_FOUND)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CreateReservationView(generics.CreateAPIView):
+    queryset = ParkingInvoice.objects.all()
+    serializer_class = ParkingInvoiceReservationSerializer
+
+    def post(self, request, *args, **kwargs):
+        address = self.request.data.get('address')
+        license_plate = self.request.data.get('license_plate')
+        token = self.request.data.get('token')
+
+        # Attempt to authenticate user by token
+        if token:
+            user = self.request.user if self.request.user.is_authenticated else None
+            if user is None and token:
+                try:
+                    user = Token.objects.get(key=token).user
+                except Token.DoesNotExist:
+                    print('user not found')
+            if user:
+                user_id = user.id
+        else:
+            # Try to find user by license plate
+            try:
+                user_profile = UserProfile.objects.get(car_id=license_plate)
+                user_id = user_profile.user.id
+            except UserProfile.DoesNotExist:
+                user_id = 0  # No user found, use default value
+
+        try:
+            parking_lot = ParkingLot.objects.get(street_address=address)
+        except ParkingLot.DoesNotExist:
+            return Response({'error': 'Parking lot not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        invoice_data = {
+            'user_id': user_id,
+            'parking_lot_id': parking_lot.id,
+            'license_plate': license_plate,
+            'reserved_time': True,
+            'hourly_price': parking_lot.price,
+            'spot_description': 'default value for testing'
+        }
+
+        serializer = self.get_serializer(data=invoice_data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

@@ -1,23 +1,30 @@
-from django.shortcuts import render
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import generics
-from django.http import JsonResponse
+from rest_framework.authentication import TokenAuthentication
+from django.views.decorators.csrf import ensure_csrf_cookie
+from rest_framework.decorators import permission_classes
+from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.models import AnonymousUser
-from django.shortcuts import redirect
-from django.shortcuts import get_object_or_404
-from rest_framework.decorators import permission_classes
+from django.core.exceptions import ValidationError
+from django.utils.dateparse import parse_datetime
+from parking_invoice.models import ParkingInvoice
 from rest_framework.permissions import AllowAny
-from rest_framework.authentication import TokenAuthentication 
+from django.shortcuts import get_object_or_404
+from rest_framework.response import Response
 from django.middleware.csrf import get_token
-from django.views.decorators.csrf import ensure_csrf_cookie
-from django.views import View
 from user_stripe.models import UserStripe
-from rest_framework import status
+from rest_framework.views import APIView
 from django.utils.http import urlencode
-import json
+from django.shortcuts import redirect
+from django.http import JsonResponse
+from rest_framework import generics
+from django.shortcuts import render
+from rest_framework import status
+from django.conf import settings
+from django.views import View
 import stripe
+import pytz
+import json
+
 
 # Set your Stripe API key
 stripe.api_key = 'sk_test_51OgVJzLevPehYIou9TNWxRxzwD1GLGeo4jKYcXCO5wp59aCLuoBd6vsqQwANcnZVE0k4QwCuYm1b3oEuSz3NJYmf00qHRz9I8C'
@@ -163,19 +170,23 @@ class CreateWebCheckoutSessionView(APIView):
     def post(self, request, *args, **kwargs):
         # Deserialize the incoming JSON data
         data = request.data
-        product_name = data.get('name', 'Default Product Name')  # Default name if not specified
-        price = data.get('price', 0)  # Default price if not specified (e.g., 20.00 EUR)
+        product_name = data.get('name', 'Default Product Name')
+        price = data.get('price', 0)
         license_plate = data.get('licensePlate', '')
         spot = data.get('spot', '')
         timestamp = data.get('timestamp', '')
+        address = data.get('address', '')
         print(license_plate)
 
-        query_params = urlencode({
-            'license': license_plate,
+        metadata = {
+            'license_plate': license_plate,
             'spot': spot,
-            'timestamp': timestamp
-        })
-
+            'timestamp': timestamp,
+            'address': address,
+            'price': price
+        }
+        query_params = urlencode(metadata)
+        print(metadata)
         try:
             # Create a Stripe checkout session with dynamic price and product name
             checkout_session = stripe.checkout.Session.create(
@@ -186,14 +197,60 @@ class CreateWebCheckoutSessionView(APIView):
                         'product_data': {
                             'name': product_name,
                         },
-                        'unit_amount': int(price * 100),  # Convert EUR to cents
+                        'unit_amount': int(price * 1),  # Convert EUR to cents
                     },
                     'quantity': 1,
                 }],
                 mode='payment',
+                metadata=metadata,
                 success_url='http://localhost:3000/stripe/success/',
                 cancel_url=f'http://localhost:3000/stripe/failure/?{query_params}',
             )
-            return Response({'url': checkout_session.url}, status=status.HTTP_200_OK)
+            return Response({'url': checkout_session.url, 'sessionId': checkout_session.id}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class StripeWebhookView(View):
+    def post(self, request, *args, **kwargs):
+        payload = request.body.decode('utf-8')
+        event_data = json.loads(payload)
+        if event_data['type'] == 'checkout.session.completed':
+            session = event_data['data']['object']
+
+            metadata = session.get('metadata', {})
+            license_plate = metadata.get('license_plate')
+            spot = metadata.get('spot')
+            address = metadata.get('address')
+            timestamp_str = metadata.get('timestamp')
+            price = metadata.get('price')
+
+            print(f"License Plate: {license_plate}")
+            print(f"Spot: {spot}")
+            print(f"Address: {address}")
+            print(f"Timestamp: {timestamp_str}")
+            print(f"Price: {price}")
+            try:
+                timestamp = parse_datetime(timestamp_str)
+                if timestamp is None:
+                    raise ValidationError("Invalid timestamp format")
+
+                # Fetch and update the invoice
+                invoice = ParkingInvoice.objects.get(
+                    license_plate=license_plate, 
+                    timestamp=timestamp, 
+                    is_paid=False
+                )
+                invoice.is_paid = True
+                invoice.final_cost = price
+                invoice.save()
+                return JsonResponse({'status': 'success', 'message': 'Invoice updated as paid'})
+            except ParkingInvoice.DoesNotExist:
+                return JsonResponse({'status': 'error', 'message': 'No matching unpaid invoice found'})
+            except ParkingInvoice.MultipleObjectsReturned:
+                return JsonResponse({'status': 'error', 'message': 'Multiple invoices match, data error'})
+            except ValidationError as e:
+                return JsonResponse({'status': 'error', 'message': str(e)})
+
+        return JsonResponse({'status': 'ignored', 'message': 'Event type not handled'})

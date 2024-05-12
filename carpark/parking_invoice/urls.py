@@ -1,5 +1,12 @@
 from django.urls import path
-from .views import ParkingInvoiceCreateView, UnpaidInvoicesListView, PaidInvoicesListView, ParkingInvoiceCountView, UnpaidInvoicesByLicensePlateView, CalculatePriceView
+from .views import (
+    ParkingInvoiceCreateView,
+    UnpaidInvoicesListView,
+    PaidInvoicesListView,
+    ParkingInvoiceCountView,
+    UnpaidInvoicesByLicensePlateView,
+    CalculatePriceView,
+    CreateReservationView)
 
 urlpatterns = [
     # Other URL patterns
@@ -9,4 +16,5 @@ urlpatterns = [
     path('count/', ParkingInvoiceCountView.as_view(), name='count_existing_invoices'),
     path('license/unpaid/', UnpaidInvoicesByLicensePlateView.as_view(), name='unpaid-invoices-by-license'),
     path('calculate-price/', CalculatePriceView.as_view(), name='calculate_price'),
+    path('reserve/', CreateReservationView.as_view(), name='reserve'),
 ]
