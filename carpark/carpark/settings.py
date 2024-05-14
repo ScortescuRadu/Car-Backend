@@ -28,7 +28,7 @@ SECRET_KEY = 'django-insecure-8i9!aeb8qrpg*b+fqu#19xk=1ae+4ry7draz8h7)_ak3xzxl$8
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['127.0.0.1', '543e-2a02-2f09-3301-1300-f09b-48e4-fe16-ad1e.ngrok-free.app']
+ALLOWED_HOSTS = ['127.0.0.1', '543e-2a02-2f09-3301-1300-f09b-48e4-fe16-ad1e.ngrok-free.app', 'localhost']
 
 
 # Application definition
@@ -61,6 +61,8 @@ INSTALLED_APPS = [
     'user_profile',
     'spot_detection',
     'city',
+    'ocupancy_metrics',
+    'income_metrics',
     'rest_framework_simplejwt.token_blacklist',
     'rest_framework.authtoken',
     'drf_yasg',

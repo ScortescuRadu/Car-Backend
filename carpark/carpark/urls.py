@@ -68,6 +68,8 @@ urlpatterns = [
     path('time/', include('operating_time.urls')),
     path('entrance/', include('entrance.urls')),
     path('parking/', include('park_entrance.urls')),
+    path('income/', include('income_metrics.urls')),
+    path('ocupancy/', include('ocupancy_metrics.urls')),
 
     # City
     path('city/', include('city.urls')),
