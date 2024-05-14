@@ -37,3 +37,18 @@ class TaskStatusConsumer(AsyncWebsocketConsumer):
             'message': message,
             'content': content
         }))
+
+
+class ParkingLotUpdateDataConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        await self.channel_layer.group_add("parking_lot_updates", self.channel_name)
+        await self.accept()
+
+    async def disconnect(self, close_code):
+        await self.channel_layer.group_discard("parking_lot_updates", self.channel_name)
+
+    async def receive(self, text_data):
+        pass
+
+    async def send_parking_lot_update(self, event):
+        await self.send(text_data=json.dumps(event["data"]))
