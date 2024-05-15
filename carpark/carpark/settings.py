@@ -63,6 +63,7 @@ INSTALLED_APPS = [
     'city',
     'ocupancy_metrics',
     'income_metrics',
+    'parking_map',
     'rest_framework_simplejwt.token_blacklist',
     'rest_framework.authtoken',
     'drf_yasg',

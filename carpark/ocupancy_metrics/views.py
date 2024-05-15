@@ -31,7 +31,30 @@ class OccupancyMetricsByAddressView(generics.GenericAPIView):
             address = serializer.validated_data['street_address']
             try:
                 parking_lot = ParkingLot.objects.get(street_address=address)
-                occupancy_metrics = OccupancyMetrics.objects.get(parking_lot=parking_lot)
+                occupancy_metrics, metrics_created = OccupancyMetrics.objects.get_or_create(
+                    parking_lot=parking_lot,
+                    defaults={
+                        'total_current_occupancy': 0,
+                        'current_occupancy': {
+                            'Monday': {f"{i:02d}:00": 0 for i in range(24)},
+                            'Tuesday': {f"{i:02d}:00": 0 for i in range(24)},
+                            'Wednesday': {f"{i:02d}:00": 0 for i in range(24)},
+                            'Thursday': {f"{i:02d}:00": 0 for i in range(24)},
+                            'Friday': {f"{i:02d}:00": 0 for i in range(24)},
+                            'Saturday': {f"{i:02d}:00": 0 for i in range(24)},
+                            'Sunday': {f"{i:02d}:00": 0 for i in range(24)}
+                        },
+                        'average_occupancy': {
+                            'Monday': {f"{i:02d}:00": 0 for i in range(24)},
+                            'Tuesday': {f"{i:02d}:00": 0 for i in range(24)},
+                            'Wednesday': {f"{i:02d}:00": 0 for i in range(24)},
+                            'Thursday': {f"{i:02d}:00": 0 for i in range(24)},
+                            'Friday': {f"{i:02d}:00": 0 for i in range(24)},
+                            'Saturday': {f"{i:02d}:00": 0 for i in range(24)},
+                            'Sunday': {f"{i:02d}:00": 0 for i in range(24)}
+                        }
+                    }
+                )
                 response_data = {
                     'current_occupancy': occupancy_metrics.current_occupancy,
                     'average_occupancy': occupancy_metrics.average_occupancy

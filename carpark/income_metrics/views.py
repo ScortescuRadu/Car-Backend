@@ -31,7 +31,25 @@ class IncomeMetricsByAddressView(generics.GenericAPIView):
             address = serializer.validated_data['street_address']
             try:
                 parking_lot = ParkingLot.objects.get(street_address=address)
-                income_metrics = IncomeMetrics.objects.get(parking_lot=parking_lot)
+                income_metrics, metrics_created = IncomeMetrics.objects.get_or_create(
+                    parking_lot=parking_lot,
+                    defaults={
+                        'daily_current': {
+                            'Monday': 0, 'Tuesday': 0, 'Wednesday': 0,
+                            'Thursday': 0, 'Friday': 0, 'Saturday': 0, 'Sunday': 0
+                        },
+                        'daily_average': {
+                            'Monday': 0, 'Tuesday': 0, 'Wednesday': 0,
+                            'Thursday': 0, 'Friday': 0, 'Saturday': 0, 'Sunday': 0
+                        },
+                        'monthly_total': {
+                            'January': 0, 'February': 0, 'March': 0, 'April': 0,
+                            'May': 0, 'June': 0, 'July': 0, 'August': 0,
+                            'September': 0, 'October': 0, 'November': 0, 'December': 0
+                        },
+                        'yearly_total': {}
+                    }
+                )
                 response_data = {
                     'daily_current': income_metrics.daily_current,
                     'daily_average': income_metrics.daily_average,

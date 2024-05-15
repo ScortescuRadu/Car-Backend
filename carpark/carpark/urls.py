@@ -70,6 +70,7 @@ urlpatterns = [
     path('parking/', include('park_entrance.urls')),
     path('income/', include('income_metrics.urls')),
     path('ocupancy/', include('ocupancy_metrics.urls')),
+    path('tile/', include('parking_map.urls')),
 
     # City
     path('city/', include('city.urls')),
