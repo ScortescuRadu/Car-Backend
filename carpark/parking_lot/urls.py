@@ -11,7 +11,8 @@ from .views import (ParkingLotListCreateView,
     ParkingLotEditPhone,
     ParkingLotEditTimes,
     ParkingLotEditCapacity,
-    ParkingLotEditAddress)
+    ParkingLotEditAddress,
+    OpenParkingLotsView)
 
 urlpatterns = [
     path('parking-lot/', ParkingLotListCreateView.as_view(), name='parking-lots-list-create'),
@@ -27,4 +28,5 @@ urlpatterns = [
     path('times-update/', ParkingLotEditTimes.as_view(), name='times-update'),
     path('capacity-update/', ParkingLotEditCapacity.as_view(), name='capacity-update'),
     path('address-update/', ParkingLotEditAddress.as_view(), name='address-update'),
+    path('radius-search/', OpenParkingLotsView.as_view(), name='radius-search'),
 ]

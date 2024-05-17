@@ -4,6 +4,7 @@ from rest_framework import generics
 from .models import ParkingLot
 from user_park.models import UserPark
 from city.models import City
+from .utils import haversine
 from .serializers import (ParkingLotSerializer,
     UserParkingLotSerializer,
     UserParkInputSerializer,
@@ -16,10 +17,14 @@ from .serializers import (ParkingLotSerializer,
     ParkPhoneUpdateSerializer,
     ParkTimesUpdateSerializer,
     ParkCapacityUpdateSerializer,
-    ParkAddressUpdateSerializer)
+    ParkAddressUpdateSerializer,
+    ParkingLotRadiusSearchSerializer)
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import get_user_model
 from rest_framework.response import Response
+from django.contrib.gis.geos import Point
+from django.contrib.gis.db.models.functions import Distance
+from django.utils import timezone
 
 # Create your views here.
 
@@ -453,3 +458,46 @@ class ParkingLotEditAddress(generics.CreateAPIView):
             # Log the exception for debugging purposes
             print(f"An unexpected error occurred: {str(e)}")
             return Response({'error': 'An unexpected error occurred'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class OpenParkingLotsView(generics.ListAPIView):
+    serializer_class = ParkingLotRadiusSearchSerializer
+
+    def get_queryset(self):
+        lat = self.request.query_params.get('lat')
+        lon = self.request.query_params.get('lon')
+        distance = self.request.query_params.get('distance')
+
+        if lat is None or lon is None or distance is None:
+            return ParkingLot.objects.none()
+
+        user_lat = float(lat)
+        user_lon = float(lon)
+        distance_km = float(distance)
+
+        parking_lots = ParkingLot.objects.all()
+
+        now = timezone.localtime()
+        current_time = now.time()
+        current_weekday = now.weekday()
+        open_parking_lots = []
+        for lot in parking_lots:
+            if lot.latitude is not None and lot.longitude is not None:
+                lot_distance = haversine(user_lat, user_lon, float(lot.latitude), float(lot.longitude))
+                if lot_distance <= distance_km:
+                    if current_weekday < 5:  # Monday to Friday
+                        if lot.weekday_opening_time and lot.weekday_closing_time:
+                            if lot.weekday_opening_time <= current_time <= lot.weekday_closing_time:
+                                open_parking_lots.append(lot)
+                    else:  # Saturday and Sunday
+                        if lot.weekend_opening_time and lot.weekend_closing_time:
+                            if lot.weekend_opening_time <= current_time <= lot.weekend_closing_time:
+                                open_parking_lots.append(lot)
+        print(open_parking_lots)
+
+        return open_parking_lots
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)

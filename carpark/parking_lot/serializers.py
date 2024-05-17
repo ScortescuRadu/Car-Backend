@@ -81,7 +81,14 @@ class ParkTimesUpdateSerializer(serializers.Serializer):
 class ParkCapacityUpdateSerializer(serializers.Serializer):
     capacity = serializers.IntegerField()
 
+
 class ParkAddressUpdateSerializer(serializers.Serializer):
     new_address = serializers.IntegerField()
     new_latitude = serializers.IntegerField()
     new_longitude = serializers.IntegerField()
+
+
+class ParkingLotRadiusSearchSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ParkingLot
+        fields = ['id', 'price', 'capacity', 'street_address', 'latitude', 'longitude']
