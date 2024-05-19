@@ -8,6 +8,9 @@ from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.pagination import LimitOffsetPagination
+from django.utils import timezone
+from datetime import timedelta
+from django.db.models import Q
 import math
 # Create your views here.
 
@@ -104,4 +107,81 @@ class LatestArticleView(generics.RetrieveAPIView):
         articles = self.get_queryset()
         serializer = MainArticlesListSerializer(articles, many=True)
 
+        return Response(serializer.data)
+
+# GET most recent green article
+class LatestGreenArticleView(generics.RetrieveAPIView):
+    queryset = Article.objects.filter(topic='green', is_featured=True).order_by('-timestamp')
+    serializer_class = ArticleSerializer
+
+    def get(self, request, *args, **kwargs):
+        article = self.get_queryset().first()  # Get the latest green article
+        if article:
+            serializer = self.serializer_class(article)
+            return Response(serializer.data)
+        return Response({"detail": "No green articles found."}, status=404)
+
+# GET most read articles article of the week
+class TopReadArticlesLastWeekView(generics.ListAPIView):
+    serializer_class = ArticleSerializer
+
+    def get_queryset(self):
+        one_week_ago = timezone.now() - timedelta(days=777)
+        return Article.objects.filter(timestamp__gte=one_week_ago, is_featured=True).order_by('-read_count')[:5]
+
+    def get(self, request, *args, **kwargs):
+        articles = self.get_queryset()
+        serializer = self.serializer_class(articles, many=True)
+        return Response(serializer.data)
+
+# GET 20 articles that are not features in other sections on mobile
+class ExcludedArticlesView(generics.ListAPIView):
+    serializer_class = ArticleSerializer
+
+    def get_queryset(self):
+        one_week_ago = timezone.now() - timedelta(days=7)
+        latest_5 = Article.objects.filter(is_featured=True).order_by('-timestamp')[:5].values_list('id', flat=True)
+        top_5_read = Article.objects.filter(timestamp__gte=one_week_ago, is_featured=True).order_by('-read_count')[:5].values_list('id', flat=True)
+        latest_green = Article.objects.filter(topic='green', is_featured=True).order_by('-timestamp').first()
+
+        exclude_ids = list(latest_5) + list(top_5_read)
+        if latest_green:
+            exclude_ids.append(latest_green.id)
+
+        return Article.objects.filter(is_featured=True).exclude(id__in=exclude_ids).order_by('-timestamp')[:20]
+
+    def get(self, request, *args, **kwargs):
+        articles = self.get_queryset()
+        serializer = self.serializer_class(articles, many=True)
+        return Response(serializer.data)
+
+# Search article
+class SearchArticlesView(generics.ListAPIView):
+    serializer_class = ArticleSerializer
+
+    def get_queryset(self):
+        query = self.request.query_params.get('query', None)
+        topics = self.request.query_params.get('topic', '')
+
+        print("Query:", query)
+        print("Topics:", topics)
+
+        if query is not None and query.strip():  # Check if query is not None and not empty after stripping spaces
+            filters = Q(title__icontains=query) | Q(subtitle_1__icontains=query) | Q(subtitle_2__icontains=query)
+            if topics:
+                topic_list = [t.strip() for t in topics.split(',')]
+                filters &= Q(topic__in=topic_list)
+                print("Topic List:", topic_list)
+            return Article.objects.filter(filters).order_by('-timestamp')[:10]
+        elif topics:  # Check if topics is not empty
+            topic_list = [t.strip() for t in topics.split(',')]
+            print("Topic List:", topic_list)
+            return Article.objects.filter(topic__in=topic_list).order_by('-timestamp')[:10]
+        else:
+            return Article.objects.none()
+
+    def get(self, request, *args, **kwargs):
+        articles = self.get_queryset()
+        serializer = self.serializer_class(articles, many=True)
+        print("Number of articles found:", len(articles))
         return Response(serializer.data)

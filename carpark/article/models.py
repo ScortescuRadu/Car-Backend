@@ -20,11 +20,14 @@ class Article(models.Model):
     latitude = models.FloatField(blank=True, null=True)
     longitude = models.FloatField(blank=True, null=True)
 
+    read_count = models.IntegerField(default=0)
+
     TOPIC_CHOICES = [
         ('sports', 'Sports'),
         ('announcements', 'Announcements'),
         ('emergency', 'Emergency'),
         ('city', 'City'),
+        ('green', 'Green'),
     ]
     topic = models.CharField(max_length=20, choices=TOPIC_CHOICES, blank=True, null=True)
 
