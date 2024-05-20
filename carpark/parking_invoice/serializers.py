@@ -9,14 +9,14 @@ class ParkingInvoiceSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ParkingInvoice
-        fields = ['parking_lot_id', 'hourly_price', 'spot_description',
+        fields = ['parking_lot', 'hourly_price', 'spot_description',
         'timestamp', 'time_spent', 'final_cost', 'license_plate', 'address']
 
 
 class ParkingInvoiceReservationSerializer(serializers.ModelSerializer):
     class Meta:
         model = ParkingInvoice
-        fields = [ 'user_id', 'parking_lot_id', 'timestamp', 'hourly_price', 'spot_description',
+        fields = [ 'user', 'parking_lot', 'timestamp', 'hourly_price', 'spot_description',
                   'is_paid', 'final_cost', 'license_plate', 'reserved_time']
 
     def create(self, validated_data):
@@ -52,7 +52,6 @@ class ParkingInvoiceOutputSerializer(serializers.ModelSerializer):
     def get_address(self, obj):
         # Fetch the parking lot address using the parking_lot_id
         try:
-            parking_lot = ParkingLot.objects.get(id=obj.parking_lot_id)
             return parking_lot.street_address
         except ParkingLot.DoesNotExist:
             return "Address not found"

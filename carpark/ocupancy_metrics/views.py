@@ -3,7 +3,8 @@ from rest_framework import generics, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from .models import OccupancyMetrics
-from .serializers import OccupancyAdjustmentSerializer, AddressSerializer
+from income_metrics.serializers import AddressSerializer
+from .serializers import OccupancyAdjustmentSerializer
 from parking_lot.models import ParkingLot
 
 # Create your views here.

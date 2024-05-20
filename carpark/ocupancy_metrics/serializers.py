@@ -48,7 +48,3 @@ class OccupancyMetricsSerializer(serializers.ModelSerializer):
     class Meta:
         model = OccupancyMetrics
         fields = ['current_occupancy', 'average_occupancy']
-
-
-class AddressSerializer(serializers.Serializer):
-    street_address = serializers.CharField(max_length=255)

@@ -34,10 +34,10 @@ class ParkingInvoiceCreateView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         user = self.get_user_from_token(self.request)
-        user_id = user.id if user else None
+        user = user if user else None
 
         # Set additional fields before saving
-        serializer.save(user_id=user_id, timestamp=timezone.now(), is_paid=False)
+        serializer.save(user=user, timestamp=timezone.now(), is_paid=False)
 
     def create(self, request, *args, **kwargs):
         user = self.get_user_from_token(request)
@@ -75,7 +75,7 @@ class UnpaidInvoicesListView(generics.ListAPIView):
             return ParkingInvoice.objects.none()
 
         unpaid_invoices = ParkingInvoice.objects.filter(
-            user_id=user.id, 
+            user=user, 
             is_paid=False
         ).select_related('parking_lot')
 
@@ -94,18 +94,18 @@ class PaidInvoicesListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        user_id = self.request.user.id if self.request.user else None
-        print(user_id)
+        user = self.request.user if self.request.user else None
+        print(user)
         recent_param = self.request.headers.get('Recent')
         print(recent_param)
 
         if recent_param == -1:
-            return ParkingInvoice.objects.filter(user_id=user_id, is_paid=True)
+            return ParkingInvoice.objects.filter(user=user, is_paid=True)
         else:
             print(recent_param)
             recent_time = timezone.now() - timedelta(days=int(recent_param))
             print(recent_time)
-            return ParkingInvoice.objects.filter(user_id=user_id, is_paid=False, timestamp__gte=recent_time)
+            return ParkingInvoice.objects.filter(user=user, is_paid=False, timestamp__gte=recent_time)
 
 
 class ParkingInvoiceCountView(generics.ListAPIView):
@@ -196,14 +196,14 @@ class CreateReservationView(generics.CreateAPIView):
                 except Token.DoesNotExist:
                     print('user not found')
             if user:
-                user_id = user.id
+                user = user
         else:
             # Try to find user by license plate
             try:
                 user_profile = UserProfile.objects.get(car_id=license_plate)
-                user_id = user_profile.user.id
+                user = user_profile.user
             except UserProfile.DoesNotExist:
-                user_id = 0  # No user found, use default value
+                user = 0  # No user found, use default value
 
         try:
             parking_lot = ParkingLot.objects.get(street_address=address)
@@ -211,8 +211,8 @@ class CreateReservationView(generics.CreateAPIView):
             return Response({'error': 'Parking lot not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         invoice_data = {
-            'user_id': user_id,
-            'parking_lot_id': parking_lot.id,
+            'user': user,
+            'parking_lot': parking_lot,
             'license_plate': license_plate,
             'reserved_time': True,
             'hourly_price': parking_lot.price,
