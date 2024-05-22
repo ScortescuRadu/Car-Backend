@@ -71,6 +71,7 @@ urlpatterns = [
     path('income/', include('income_metrics.urls')),
     path('ocupancy/', include('ocupancy_metrics.urls')),
     path('tile/', include('parking_map.urls')),
+    path('parking-spot/', include('parking_spot.urls')),
 
     # City
     path('city/', include('city.urls')),
@@ -89,7 +90,8 @@ urlpatterns = [
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     
     # Spot Detection
-    path('spot-detection/', include('spot_detection.urls'))
+    path('spot-detection/', include('spot_detection.urls')),
+    path('image-dataset/', include('image_dataset.urls'))
 ]
 
 if settings.DEBUG:

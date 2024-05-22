@@ -9,10 +9,16 @@ from django.views import View
 from rest_framework import generics
 from django.shortcuts import get_object_or_404
 from django.views import generic
-from .serializers import BoundingBoxSerializer, ImageProcessSerializer
+from .serializers import BoundingBoxSerializer, ImageProcessSerializer, BoundingBoxInputSerializer
+from parking_lot.models import ParkingLot
+from image_task.models import ImageTask
+from parking_spot.models import ParkingSpot
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 from rest_framework import viewsets, status
+from rest_framework.authtoken.models import Token
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.exceptions import AuthenticationFailed
 
 # Create your views here.
 
@@ -57,15 +63,65 @@ class CheckTaskStatusView(View):
             return JsonResponse({'status': 'PENDING'})
 
 
-class StoreBoundingBoxesView(View):
-    def post(self, request):
-        data = json.loads(request.body.decode('utf-8'))
-        task_id = data.get('task_id')
-        bounding_boxes_json = data.get('bounding_boxes_json')
+class StoreBoundingBoxesView(generics.CreateAPIView):
+    serializer_class = BoundingBoxInputSerializer
+    authentication_classes = [TokenAuthentication]
 
-        BoundingBox.objects.create(task_id=task_id, bounding_boxes_json=bounding_boxes_json)
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        token = serializer.validated_data['token']
+        street_address = serializer.validated_data['street_address']
+        camera_address = serializer.validated_data['camera_address']
+        bounding_boxes = serializer.validated_data['bounding_boxes']
+        
+        # Get the user from the token
+        user_token = self.request.query_params.get('token')
+        user = self.request.user if self.request.user.is_authenticated else None
+        if user is None and user_token:
+            try:
+                user = Token.objects.get(key=user_token).user
+            except Token.DoesNotExist:
+                return Response({'detail': 'Invalid token'}, status=status.HTTP_401_UNAUTHORIZED)
 
-        return JsonResponse({'message': 'Bounding boxes stored successfully'})
+        # Get or create the ParkingLot
+        parking_lot = get_object_or_404(ParkingLot, street_address=street_address)
 
-    def get_object(self):
-        return get_object_or_404(BoundingBox, pk=self.kwargs['pk'])
+        # Create or get the ImageTask
+        image_task, created = ImageTask.objects.get_or_create(
+            parking_lot=parking_lot,
+            camera_address=camera_address
+        )
+
+        # Delete existing bounding boxes for the given camera address and parking lot
+        BoundingBox.objects.filter(
+            image_task__camera_address=camera_address,
+            image_task__parking_lot=parking_lot
+        ).delete()
+
+        # Iterate over bounding boxes and create entries
+        for box_data in bounding_boxes:
+            level = box_data['level']
+            sector = box_data['letter']
+            number = box_data['number']
+            is_drawn = box_data['is_drawn']
+
+            # Retrieve or create the ParkingSpot
+            parking_spot, created = ParkingSpot.objects.get_or_create(
+                parking_lot=parking_lot,
+                level=level,
+                sector=sector,
+                number=number,
+                defaults={'is_occupied': False}  # Default value for is_occupied
+            )
+
+            # Create BoundingBox associated with the ParkingSpot
+            BoundingBox.objects.create(
+                image_task=image_task,
+                bounding_boxes_json=box_data['box'],
+                parking_spot=parking_spot,
+                is_drawn=is_drawn
+            )
+
+        return Response({'message': 'Bounding boxes stored successfully'}, status=status.HTTP_201_CREATED)
