@@ -4,8 +4,10 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import TokenAuthentication
 from .models import ParkingLot, ParkingSpot
-from .serializers import ParkingSpotSerializer, ParkingSpotInputSerializer
+from .serializers import ParkingSpotSerializer, ParkingSpotInputSerializer, SpotByAddressInputSerializer
 from django.shortcuts import get_object_or_404
+from parking_lot.models import ParkingLot
+from image_task.models import ImageTask
 
 # Create your views here.
 
@@ -42,3 +44,34 @@ class ParkingSpotCreateView(generics.CreateAPIView):
         parking_spot.save()
 
         return Response(ParkingSpotSerializer(parking_spot).data, status=status.HTTP_201_CREATED)
+
+
+class ParkingSpotListView(generics.GenericAPIView):
+    serializer_class = SpotByAddressInputSerializer
+
+    def get_queryset(self):
+        # This method is required but not used since we handle data fetching in post method.
+        return ParkingSpot.objects.none()
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        street_address = serializer.validated_data['street_address']
+
+        # Get the ParkingLot by street_address
+        parking_lot = get_object_or_404(ParkingLot, street_address=street_address)
+
+        # Get ImageTasks associated with the ParkingLot
+        image_tasks = ImageTask.objects.filter(parking_lot=parking_lot).prefetch_related('parkingspot_set')
+
+        # Prepare the data to be serialized
+        data = []
+        for image_task in image_tasks:
+            spots = ParkingSpot.objects.filter(image_task=image_task)
+            task_data = {
+                'camera_address': image_task.camera_address,
+                'spots': ParkingSpotSerializer(spots, many=True).data
+            }
+            data.append(task_data)
+
+        return Response(data, status=status.HTTP_200_OK)

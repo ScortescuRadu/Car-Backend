@@ -14,3 +14,11 @@ class ParkingSpotInputSerializer(serializers.Serializer):
     class Meta:
         model = ParkingSpot
         fields = ['token', 'street_address', 'level', 'sector', 'number', 'is_occupied']
+
+
+class SpotByAddressInputSerializer(serializers.Serializer):
+    street_address = serializers.CharField()
+
+    class Meta:
+        model = ParkingLot
+        fields = ['street_address']

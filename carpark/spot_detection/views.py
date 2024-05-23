@@ -110,6 +110,7 @@ class StoreBoundingBoxesView(generics.CreateAPIView):
             # Retrieve or create the ParkingSpot
             parking_spot, created = ParkingSpot.objects.get_or_create(
                 parking_lot=parking_lot,
+                image_task=image_task,
                 level=level,
                 sector=sector,
                 number=number,
