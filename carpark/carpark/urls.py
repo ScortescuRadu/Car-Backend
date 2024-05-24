@@ -91,7 +91,8 @@ urlpatterns = [
     
     # Spot Detection
     path('spot-detection/', include('spot_detection.urls')),
-    path('image-dataset/', include('image_dataset.urls'))
+    path('image-dataset/', include('image_dataset.urls')),
+    path('image-task/', include('image_task.urls')),
 ]
 
 if settings.DEBUG:

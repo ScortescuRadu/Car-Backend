@@ -52,3 +52,42 @@ class ParkingLotUpdateDataConsumer(AsyncWebsocketConsumer):
 
     async def send_parking_lot_update(self, event):
         await self.send(text_data=json.dumps(event["data"]))
+
+
+class ParkingSpotUpdateConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        await self.channel_layer.group_add("parking_spot_updates", self.channel_name)
+        await self.accept()
+
+    async def disconnect(self, close_code):
+        await self.channel_layer.group_discard("parking_spot_updates", self.channel_name)
+
+    async def receive(self, text_data):
+        pass
+
+    async def send_parking_spot_update(self, event):
+        await self.send(text_data=json.dumps(event["data"]))
+
+
+class CameraUpdateConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        await self.channel_layer.group_add("camera_updates", self.channel_name)
+        await self.accept()
+
+    async def disconnect(self, close_code):
+        await self.channel_layer.group_discard("camera_updates", self.channel_name)
+
+    async def receive(self, text_data):
+        text_data_json = json.loads(text_data)
+        message_type = text_data_json.get('type')
+        
+        if message_type == 'frame_data':
+            camera_address = text_data_json['camera_address']
+            image_base64 = text_data_json['image']
+            format, imgstr = image_base64.split(';base64,') 
+            ext = format.split('/')[-1] 
+            image_file = ContentFile(base64.b64decode(imgstr), name=f'{camera_address}.{ext}')
+            # Save the image file to storage
+            file_name = default_storage.save(f'frames/{camera_address}.{ext}', image_file)
+            # Process the image or perform any additional operations here
+            print(f'Received frame from camera: {camera_address}, saved to: {file_name}')
