@@ -7,6 +7,14 @@ from django.shortcuts import get_object_or_404
 from .models import ImageTask, ParkingLot
 from .serializers import ImageTaskUserInputSerializer, ImageTaskUserOutputSerializer
 from user_park.models import UserPark
+from django.views import View
+from django.http import JsonResponse
+from django.core.files.base import ContentFile
+from ultralytics import YOLO
+import os
+import json
+from io import BytesIO
+from PIL import Image
 # Create your views here.
 
 class UserImageTasksView(generics.GenericAPIView):
@@ -35,3 +43,44 @@ class UserImageTasksView(generics.GenericAPIView):
 
         response_serializer = ImageTaskUserOutputSerializer(image_tasks, many=True)
         return Response(response_serializer.data, status=status.HTTP_200_OK)
+
+
+model = YOLO('yolov8n.pt')
+
+class ProcessFrameView(View):
+    def post(self, request, *args, **kwargs):
+        try:
+            # Retrieve the frame and metadata
+            frame = request.FILES.get('image_0')
+            camera_address = request.POST.get('device_id_0')
+            parking_lot = request.POST.get('parking_lot')  # Assuming you are sending this data
+
+            if not frame:
+                return JsonResponse({'error': 'No image file provided'}, status=400)
+
+            # Read the image from the uploaded file
+            image = Image.open(frame)
+
+            # Convert the image to a format compatible with YOLOv8 (if necessary)
+            image = image.convert('RGB')
+
+            # Convert the image to bytes
+            img_byte_arr = BytesIO()
+            image.save(img_byte_arr, format='JPEG')
+            img_byte_arr = img_byte_arr.getvalue()
+
+            # Perform detection
+            results = model(img_byte_arr)  # Perform YOLOv8 detection
+            detections = results.pandas().xyxy[0].to_json(orient="records")  # Convert detections to JSON
+
+            # Prepare the response
+            response_data = {
+                'camera_address': camera_address,
+                'parking_lot': parking_lot,
+                'detections': json.loads(detections)
+            }
+
+            return JsonResponse(response_data, status=200)
+
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)

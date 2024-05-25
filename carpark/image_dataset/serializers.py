@@ -8,3 +8,8 @@ class ImageDatasetSerializer(serializers.ModelSerializer):
     class Meta:
         model = ImageDataset
         fields = ['id', 'street_address', 'image', 'bounding_boxes']
+
+class ImageDatasetRetrieveSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ImageDataset
+        fields = ['id', 'parking_lot', 'image', 'bounding_boxes_json']

@@ -1,8 +1,9 @@
 from rest_framework import generics, status
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from django.shortcuts import get_object_or_404
 from .models import ImageDataset, ParkingLot
-from .serializers import ImageDatasetSerializer
+from .serializers import ImageDatasetSerializer, ImageDatasetRetrieveSerializer
 # Create your views here.
 
 class ImageDatasetView(generics.CreateAPIView):
@@ -27,3 +28,12 @@ class ImageDatasetView(generics.CreateAPIView):
         )
 
         return Response({'message': 'Image dataset stored successfully'}, status=status.HTTP_201_CREATED)
+
+
+class ImageDatasetListView(APIView):
+    def post(self, request, *args, **kwargs):
+        start = request.data.get('start', 0)
+        end = request.data.get('end', 15)
+        datasets = ImageDataset.objects.all()[start:end]
+        serializer = ImageDatasetRetrieveSerializer(datasets, many=True)
+        return Response(serializer.data)
