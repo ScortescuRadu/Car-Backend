@@ -1,5 +1,8 @@
 from channels.generic.websocket import AsyncWebsocketConsumer
 import json
+import base64
+from django.core.files.base import ContentFile
+from .utils import process_image_and_extract_license_plate
 
 class TaskStatusConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -83,11 +86,14 @@ class CameraUpdateConsumer(AsyncWebsocketConsumer):
         
         if message_type == 'frame_data':
             camera_address = text_data_json['camera_address']
+            destination_type = text_data_json['destination_type']
             image_base64 = text_data_json['image']
             format, imgstr = image_base64.split(';base64,') 
-            ext = format.split('/')[-1] 
-            image_file = ContentFile(base64.b64decode(imgstr), name=f'{camera_address}.{ext}')
-            # Save the image file to storage
-            file_name = default_storage.save(f'frames/{camera_address}.{ext}', image_file)
-            # Process the image or perform any additional operations here
-            print(f'Received frame from camera: {camera_address}, saved to: {file_name}')
+            image_data = base64.b64decode(imgstr)
+            image_file = ContentFile(image_data, name=f'{camera_address}.jpg')
+
+            # Process the image to extract the license plate
+            license_plate = process_image_and_extract_license_plate(image_file)
+
+            # Log the result or perform any additional operations here
+            print(f'Received frame from camera: {camera_address}, license plate: {license_plate}, destination: {destination_type}')

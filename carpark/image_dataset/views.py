@@ -16,6 +16,8 @@ class ImageDatasetView(generics.CreateAPIView):
         street_address = serializer.validated_data['street_address']
         bounding_boxes = serializer.validated_data['bounding_boxes']
         image = serializer.validated_data['image']
+        original_image_width = serializer.validated_data['original_image_width']
+        original_image_height = serializer.validated_data['original_image_height']
 
         # Get or create the ParkingLot
         parking_lot = get_object_or_404(ParkingLot, street_address=street_address)
@@ -24,7 +26,9 @@ class ImageDatasetView(generics.CreateAPIView):
         image_dataset = ImageDataset.objects.create(
             parking_lot=parking_lot,
             image=image,
-            bounding_boxes_json=bounding_boxes
+            bounding_boxes_json=bounding_boxes,
+            original_image_width=original_image_width,
+            original_image_height=original_image_height
         )
 
         return Response({'message': 'Image dataset stored successfully'}, status=status.HTTP_201_CREATED)

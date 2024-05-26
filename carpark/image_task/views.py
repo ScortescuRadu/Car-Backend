@@ -1,4 +1,5 @@
 from django.shortcuts import render
+from rest_framework.views import APIView
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -43,6 +44,54 @@ class UserImageTasksView(generics.GenericAPIView):
 
         response_serializer = ImageTaskUserOutputSerializer(image_tasks, many=True)
         return Response(response_serializer.data, status=status.HTTP_200_OK)
+
+
+class CreateEntranceExitView(APIView):
+    authentication_classes = [TokenAuthentication]
+
+    def post(self, request, *args, **kwargs):
+        serializer = ImageTaskUserInputSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        token = serializer.validated_data['token']
+        street_address = request.data.get('street_address')
+        camera_address = request.data.get('camera_address')
+        camera_type = request.data.get('camera_type')
+        device_id = request.data.get('device_id')
+        label = request.data.get('label')
+        destination_type = request.data.get('destination_type')
+
+        parking_lot = get_object_or_404(ParkingLot, street_address=street_address)
+
+        # Check for existing identical entry
+        existing_entry = ImageTask.objects.filter(
+            parking_lot=parking_lot,
+            camera_address=camera_address,
+            camera_type=camera_type,
+            device_id=device_id,
+            label=label,
+            destination_type=destination_type
+        ).first()
+
+        if existing_entry:
+            return Response({
+                'message': 'An identical entry already exists.',
+                'id': existing_entry.id
+            }, status=status.HTTP_200_OK)
+
+        # Create new entry if no identical entry exists
+        image_task = ImageTask.objects.create(
+            parking_lot=parking_lot,
+            camera_address=camera_address,
+            camera_type=camera_type,
+            device_id=device_id,
+            label=label,
+            destination_type=destination_type
+        )
+
+        return Response({
+            'message': 'Entry created successfully',
+            'id': image_task.id
+        }, status=status.HTTP_201_CREATED)
 
 
 model = YOLO('yolov8n.pt')

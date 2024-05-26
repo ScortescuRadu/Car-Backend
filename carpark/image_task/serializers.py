@@ -13,4 +13,4 @@ class ImageTaskUserOutputSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ImageTask
-        fields = ['street_address', 'camera_address', 'camera_type', 'device_id', 'label']
+        fields = ['street_address', 'camera_address', 'camera_type', 'device_id', 'label', 'destination_type']

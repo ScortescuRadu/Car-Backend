@@ -62,7 +62,7 @@ class ParkingSpotListView(generics.GenericAPIView):
         parking_lot = get_object_or_404(ParkingLot, street_address=street_address)
 
         # Get ImageTasks associated with the ParkingLot
-        image_tasks = ImageTask.objects.filter(parking_lot=parking_lot).prefetch_related('parkingspot_set')
+        image_tasks = ImageTask.objects.filter(parking_lot=parking_lot, destination_type='spot').prefetch_related('parkingspot_set')
 
         # Prepare the data to be serialized
         data = []
