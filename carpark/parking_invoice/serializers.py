@@ -52,7 +52,7 @@ class ParkingInvoiceOutputSerializer(serializers.ModelSerializer):
     def get_address(self, obj):
         # Fetch the parking lot address using the parking_lot_id
         try:
-            return parking_lot.street_address
+            return obj.parking_lot.street_address  # Access the related ParkingLot instance's street_address
         except ParkingLot.DoesNotExist:
             return "Address not found"
 
