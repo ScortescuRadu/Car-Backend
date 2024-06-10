@@ -14,3 +14,24 @@ class ImageTaskUserOutputSerializer(serializers.ModelSerializer):
     class Meta:
         model = ImageTask
         fields = ['street_address', 'camera_address', 'camera_type', 'device_id', 'label', 'destination_type']
+
+
+class FrameInputSerializer(serializers.Serializer):
+    image_0 = serializers.ImageField()
+    device_id_0 = serializers.CharField()
+    parking_lot = serializers.CharField()
+
+
+class DetectionSerializer(serializers.Serializer):
+    xmin = serializers.FloatField()
+    ymin = serializers.FloatField()
+    xmax = serializers.FloatField()
+    ymax = serializers.FloatField()
+    confidence = serializers.FloatField()
+    class_name = serializers.CharField()
+
+
+class FrameOutputSerializer(serializers.Serializer):
+    camera_address = serializers.CharField()
+    parking_lot = serializers.CharField()
+    detections = DetectionSerializer(many=True)

@@ -6,7 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import TokenAuthentication
 from django.shortcuts import get_object_or_404
 from .models import ImageTask, ParkingLot
-from .serializers import ImageTaskUserInputSerializer, ImageTaskUserOutputSerializer
+from .serializers import ImageTaskUserInputSerializer, ImageTaskUserOutputSerializer, FrameInputSerializer, FrameOutputSerializer
 from user_park.models import UserPark
 from django.views import View
 from django.http import JsonResponse
@@ -16,6 +16,9 @@ import os
 import json
 from io import BytesIO
 from PIL import Image
+import logging
+import cv2
+import numpy as np
 # Create your views here.
 
 class UserImageTasksView(generics.GenericAPIView):
@@ -96,40 +99,78 @@ class CreateEntranceExitView(APIView):
 
 model = YOLO('yolov8n.pt')
 
-class ProcessFrameView(View):
+class ProcessFrameView(generics.GenericAPIView):
+    serializer_class = FrameInputSerializer
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
     def post(self, request, *args, **kwargs):
         try:
             # Retrieve the frame and metadata
             frame = request.FILES.get('image_0')
             camera_address = request.POST.get('device_id_0')
-            parking_lot = request.POST.get('parking_lot')  # Assuming you are sending this data
+            parking_lot = request.POST.get('parking_lot')
 
             if not frame:
-                return JsonResponse({'error': 'No image file provided'}, status=400)
+                logging.error('No image file provided')
+                return Response({'error': 'No image file provided'}, status=status.HTTP_400_BAD_REQUEST)
 
             # Read the image from the uploaded file
-            image = Image.open(frame)
+            try:
+                image = Image.open(frame)
+            except Exception as e:
+                logging.error(f'Error opening image: {str(e)}')
+                return Response({'error': 'Invalid image file'}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Convert the image to a format compatible with YOLOv8 (if necessary)
-            image = image.convert('RGB')
+            logging.info(f'Original image format: {image.format}, size: {image.size}')
 
-            # Convert the image to bytes
-            img_byte_arr = BytesIO()
-            image.save(img_byte_arr, format='JPEG')
-            img_byte_arr = img_byte_arr.getvalue()
+            # Convert the image to a numpy array using cv2
+            image_np = np.array(image.convert('RGB'))
+            image_np = cv2.cvtColor(image_np, cv2.COLOR_RGB2BGR)
+            logging.info(f'Image converted to numpy array, shape: {image_np.shape}')
 
             # Perform detection
-            results = model(img_byte_arr)  # Perform YOLOv8 detection
-            detections = results.pandas().xyxy[0].to_json(orient="records")  # Convert detections to JSON
+            try:
+                results = model(image_np)  # Perform YOLOv8 detection
+            except Exception as e:
+                logging.error(f'Error during YOLO detection: {str(e)}')
+                return Response({'error': 'YOLO detection error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+            detections_list = []
+            for result in results:
+                for box in result.boxes:
+                    bbox = box.xyxy[0].cpu().numpy().tolist()  # Convert to list of float
+                    conf = float(box.conf.cpu().numpy())  # Convert to standard float
+                    cls = int(box.cls.cpu().numpy())  # Convert to standard int
+                    detections_list.append({
+                        'xmin': bbox[0],
+                        'ymin': bbox[1],
+                        'xmax': bbox[2],
+                        'ymax': bbox[3],
+                        'confidence': conf,
+                        'class_name': model.names[cls]
+                    })
+
+            detections_json = json.dumps(detections_list)
+            logging.info(f'Detections: {detections_json}')
 
             # Prepare the response
             response_data = {
                 'camera_address': camera_address,
                 'parking_lot': parking_lot,
-                'detections': json.loads(detections)
+                'detections': detections_list
             }
 
-            return JsonResponse(response_data, status=200)
+            response_serializer = FrameOutputSerializer(data=response_data)
+            if response_serializer.is_valid():
+                return Response(response_serializer.data, status=status.HTTP_200_OK)
+            else:
+                logging.error(f'Serializer errors: {response_serializer.errors}')
+                return Response(response_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+        except UnicodeDecodeError as e:
+            logging.error(f'Unicode decoding error: {str(e)}')
+            return Response({'error': f'Unicode decoding error: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
+            logging.error(f'General error: {str(e)}')
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
