@@ -35,3 +35,19 @@ class FrameOutputSerializer(serializers.Serializer):
     camera_address = serializers.CharField()
     parking_lot = serializers.CharField()
     detections = DetectionSerializer(many=True)
+
+
+class DetectionOCRSerializer(serializers.Serializer):
+    xmin = serializers.FloatField()
+    ymin = serializers.FloatField()
+    xmax = serializers.FloatField()
+    ymax = serializers.FloatField()
+    confidence = serializers.FloatField()
+    class_name = serializers.CharField()
+    ocr_text = serializers.CharField(required=False, allow_blank=True)  # New field for OCR result
+
+
+class FrameOutputOCRSerializer(serializers.Serializer):
+    camera_address = serializers.CharField()
+    parking_lot = serializers.CharField()
+    detections = DetectionOCRSerializer(many=True)

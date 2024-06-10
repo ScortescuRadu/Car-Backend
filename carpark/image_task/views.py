@@ -6,7 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import TokenAuthentication
 from django.shortcuts import get_object_or_404
 from .models import ImageTask, ParkingLot
-from .serializers import ImageTaskUserInputSerializer, ImageTaskUserOutputSerializer, FrameInputSerializer, FrameOutputSerializer
+from .serializers import ImageTaskUserInputSerializer, ImageTaskUserOutputSerializer, FrameInputSerializer, FrameOutputSerializer, FrameOutputOCRSerializer
 from user_park.models import UserPark
 from django.views import View
 from django.http import JsonResponse
@@ -263,14 +263,15 @@ class ProcessEntranceExitView(generics.GenericAPIView):
                     cls = int(box.cls.cpu().numpy())  # Convert to standard int
                     class_name = model_license_plate.names[cls] if cls in model_license_plate.names else 'unknown'
 
-                    detections_list.append({
+                    detection = {
                         'xmin': bbox[0],
                         'ymin': bbox[1],
                         'xmax': bbox[2],
                         'ymax': bbox[3],
                         'confidence': conf,
-                        'class_name': class_name
-                    })
+                        'class_name': class_name,
+                        'ocr_text': ''  # Initialize as empty string
+                    }
 
                     # Draw bounding box on the image
                     cv2.rectangle(image_np, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), (0, 255, 0), 2)
@@ -282,9 +283,11 @@ class ProcessEntranceExitView(generics.GenericAPIView):
                     try:
                         ocr_results = reader.readtext(license_plate_img)
                         for ocr_result in ocr_results:
-                            detections_list[-1]['ocr_text'] = ocr_result[1]
+                            detection['ocr_text'] = ocr_result[1]
                     except Exception as e:
                         logging.error(f'Error during OCR: {str(e)}')
+
+                    detections_list.append(detection)
 
             # Save the image with bounding boxes locally for debugging
             debug_image_path = os.path.join('debug_images', 'debug_image_with_boxes.jpg')
@@ -302,7 +305,7 @@ class ProcessEntranceExitView(generics.GenericAPIView):
                 'detections': detections_list
             }
 
-            response_serializer = FrameOutputSerializer(data=response_data)
+            response_serializer = FrameOutputOCRSerializer(data=response_data)
             if response_serializer.is_valid():
                 return Response(response_serializer.data, status=status.HTTP_200_OK)
             else:
