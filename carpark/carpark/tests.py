@@ -12,7 +12,6 @@ class WebsocketTests(TestCase):
         connected, subprotocol = await communicator.connect()
         self.assertTrue(connected)
 
-        # Simulate a message being sent to the group
         channel_layer = get_channel_layer()
         await channel_layer.group_send(
             "parking_lot_updates",
@@ -25,7 +24,6 @@ class WebsocketTests(TestCase):
         response = await communicator.receive_json_from()
         self.assertEqual(response, {"update": "Parking lot full"})
 
-        # Close the connection
         await communicator.disconnect()
 
     async def async_test_parking_spot_update_consumer(self):
@@ -33,7 +31,6 @@ class WebsocketTests(TestCase):
         connected, subprotocol = await communicator.connect()
         self.assertTrue(connected)
 
-        # Simulate a message being sent to the group
         channel_layer = get_channel_layer()
         await channel_layer.group_send(
             "parking_spot_updates",
@@ -46,7 +43,6 @@ class WebsocketTests(TestCase):
         response = await communicator.receive_json_from()
         self.assertEqual(response, {"update": "Parking spot taken"})
 
-        # Close the connection
         await communicator.disconnect()
 
     async def async_test_camera_update_consumer(self):
