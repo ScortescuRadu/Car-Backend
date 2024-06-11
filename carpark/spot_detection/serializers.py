@@ -20,9 +20,11 @@ class BoundingBoxInputSerializer(serializers.Serializer):
     street_address = serializers.CharField()
     camera_address = serializers.CharField()
     bounding_boxes = serializers.ListField(child=serializers.JSONField())
+    destination_type = serializers.CharField()
+    camera_type = serializers.CharField()
 
     class Meta:
-        fields = ['token', 'street_address', 'camera_address', 'bounding_boxes']
+        fields = ['token', 'street_address', 'camera_address', 'bounding_boxes', 'destination_type', 'camera_type']
 
 
 class BoundingBoxesSerializer(serializers.ModelSerializer):

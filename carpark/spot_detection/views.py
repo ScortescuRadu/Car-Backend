@@ -75,6 +75,8 @@ class StoreBoundingBoxesView(generics.CreateAPIView):
         street_address = serializer.validated_data['street_address']
         camera_address = serializer.validated_data['camera_address']
         bounding_boxes = serializer.validated_data['bounding_boxes']
+        destination_type = serializer.validated_data['destination_type']
+        camera_type = serializer.validated_data['camera_type']
         
         # Get the user from the token
         user_token = self.request.query_params.get('token')
@@ -91,7 +93,9 @@ class StoreBoundingBoxesView(generics.CreateAPIView):
         # Create or get the ImageTask
         image_task, created = ImageTask.objects.get_or_create(
             parking_lot=parking_lot,
-            camera_address=camera_address
+            camera_address=camera_address,
+            destination_type=destination_type,
+            camera_type=camera_type
         )
 
         # Delete existing bounding boxes for the given camera address and parking lot
