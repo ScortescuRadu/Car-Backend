@@ -8,12 +8,23 @@ class ImageTaskUserInputSerializer(serializers.ModelSerializer):
         fields = ['camera_type', 'token']
 
 
+class ImageTaskBoxesByUserInputSerializer(serializers.ModelSerializer):
+    token = serializers.CharField()
+    parking_lot = serializers.CharField()
+    camera_address = serializers.CharField()
+    camera_type = serializers.ChoiceField(choices=ImageTask.CAMERA_TYPE_CHOICES)
+
+    class Meta:
+        model = ImageTask
+        fields = ['token', 'parking_lot', 'camera_address', 'camera_type']
+
+
 class ImageTaskUserOutputSerializer(serializers.ModelSerializer):
     street_address = serializers.CharField(source='parking_lot.street_address')
 
     class Meta:
         model = ImageTask
-        fields = ['street_address', 'camera_address', 'camera_type', 'device_id', 'label', 'destination_type']
+        fields = ['street_address', 'camera_address', 'camera_type', 'device_id', 'label', 'destination_type', 'original_image_width', 'original_image_height']
 
 
 class FrameInputSerializer(serializers.Serializer):

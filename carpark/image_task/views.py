@@ -6,10 +6,13 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import TokenAuthentication
 from django.shortcuts import get_object_or_404
 from .models import ImageTask, ParkingLot
-from .serializers import ImageTaskUserInputSerializer, ImageTaskUserOutputSerializer, FrameInputSerializer, FrameOutputSerializer, FrameOutputOCRSerializer
+from .serializers import ImageTaskUserInputSerializer, ImageTaskUserOutputSerializer, FrameInputSerializer, FrameOutputSerializer, FrameOutputOCRSerializer, ImageTaskBoxesByUserInputSerializer
 from user_park.models import UserPark
 from parking_invoice.models import ParkingInvoice
 from user_profile.models import UserProfile
+from spot_detection.models import BoundingBox
+from parking_spot.models import ParkingSpot
+from spot_detection.serializers import BoundingBoxesSerializer
 from carpark import settings
 from django.views import View
 from django.http import JsonResponse
@@ -53,6 +56,45 @@ class UserImageTasksView(generics.GenericAPIView):
 
         response_serializer = ImageTaskUserOutputSerializer(image_tasks, many=True)
         return Response(response_serializer.data, status=status.HTTP_200_OK)
+
+
+class UserImageTaskBoxesView(generics.GenericAPIView):
+    serializer_class = ImageTaskBoxesByUserInputSerializer
+    authentication_classes = [TokenAuthentication]
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        token = serializer.validated_data['token']
+        parking_lot_address = serializer.validated_data['parking_lot']
+        camera_address = serializer.validated_data['camera_address']
+        camera_type = serializer.validated_data['camera_type']
+
+       # Get the parking lot
+        parking_lot = ParkingLot.objects.filter(street_address=parking_lot_address).first()
+        if not parking_lot:
+            return Response({'detail': 'Parking lot not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Get the image task
+        image_task = ImageTask.objects.filter(parking_lot=parking_lot,
+                                              camera_address=camera_address,
+                                              camera_type=camera_type).first()
+        if not image_task:
+            return Response({'detail': 'Image task not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Get the bounding boxes for the image task
+        bounding_boxes = BoundingBox.objects.filter(image_task=image_task)
+
+        # Serialize the bounding boxes
+        bounding_boxes_data = BoundingBoxesSerializer(bounding_boxes, many=True).data
+
+        # Prepare the response data
+        response_data = {
+            'image_task': ImageTaskUserOutputSerializer(image_task).data,
+            'bounding_boxes': bounding_boxes_data
+        }
+
+        return Response(response_data, status=status.HTTP_200_OK)
 
 
 class CreateEntranceExitView(APIView):

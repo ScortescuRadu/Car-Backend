@@ -70,6 +70,7 @@ class ParkingSpotListView(generics.GenericAPIView):
             spots = ParkingSpot.objects.filter(image_task=image_task)
             task_data = {
                 'camera_address': image_task.camera_address,
+                'camera_type': image_task.camera_type,
                 'spots': ParkingSpotSerializer(spots, many=True).data
             }
             data.append(task_data)

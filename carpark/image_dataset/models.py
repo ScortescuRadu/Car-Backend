@@ -6,7 +6,7 @@ class ImageDataset(models.Model):
     parking_lot = models.ForeignKey(ParkingLot, on_delete=models.CASCADE)
     image = models.ImageField(upload_to='images/')
     bounding_boxes_json = models.JSONField(default=dict)
-    original_image_width = models.IntegerField(null=True, default=0)  # Add this line
+    original_image_width = models.IntegerField(null=True, default=0)
     original_image_height = models.IntegerField(null=True, default=0) 
 
     def __str__(self):
