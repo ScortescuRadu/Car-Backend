@@ -231,3 +231,66 @@ class EntranceExitFrameConsumer(AsyncWebsocketConsumer):
 
         except Exception as e:
             print(f"Error creating invoice: {str(e)}")
+
+model_car = YOLO('/Users/raduscortescu/Desktop/Car-Backend/carpark/yolov8n.pt')
+
+class SpotFrameConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        await self.channel_layer.group_add("spot_frame", self.channel_name)
+        await self.accept()
+        print("WebSocket connection opened for spot frame")
+
+    async def disconnect(self, close_code):
+        await self.channel_layer.group_discard("spot_frame", self.channel_name)
+        print(f"WebSocket connection closed with code: {close_code}")
+
+    async def receive(self, text_data):
+        print("Message received from WebSocket")
+        try:
+            data = json.loads(text_data)
+            image_data = base64.b64decode(data['image'])
+            camera_address = data['device_id_0']
+            parking_lot_address = data['parking_lot']
+            token = data['token']
+
+            image_np = self.convert_image_data_to_np(image_data)
+
+            results = model_car(image_np)
+            bounding_boxes = self.process_detections(results)
+
+            response_data = {
+                'camera_address': camera_address,
+                'parking_lot': parking_lot_address,
+                'bounding_boxes': bounding_boxes
+            }
+
+            await self.send(text_data=json.dumps(response_data))
+            print(f"Sent response data: {response_data}")
+
+        except Exception as e:
+            print(f"Error processing WebSocket message: {str(e)}")
+
+    def convert_image_data_to_np(self, image_data):
+        import cv2
+        image = Image.open(BytesIO(image_data))
+        image = image.convert('RGB')
+        image_np = np.array(image)
+        image_np = cv2.cvtColor(image_np, cv2.COLOR_RGB2BGR)
+        return image_np
+
+    def process_detections(self, results):
+        object_counts = {
+            "car": 0,
+            "bus": 0,
+            "truck": 0
+        }
+        for result in results:
+            for box in result.boxes:
+                cls = int(box.cls.cpu().numpy())
+                class_name = model_car.names[cls] if cls in model_car.names else 'unknown'
+
+                if class_name in object_counts:
+                    object_counts[class_name] += 1
+
+        summary_string = f"{object_counts['car']} cars, {object_counts['bus']} buses, {object_counts['truck']} trucks"
+        return object_counts, summary_string
