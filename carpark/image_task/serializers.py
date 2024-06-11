@@ -20,6 +20,7 @@ class FrameInputSerializer(serializers.Serializer):
     image_0 = serializers.ImageField()
     device_id_0 = serializers.CharField()
     parking_lot = serializers.CharField()
+    token = serializers.CharField(required=False, allow_blank=True)
 
 
 class DetectionSerializer(serializers.Serializer):

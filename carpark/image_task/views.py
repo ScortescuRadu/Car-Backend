@@ -8,6 +8,9 @@ from django.shortcuts import get_object_or_404
 from .models import ImageTask, ParkingLot
 from .serializers import ImageTaskUserInputSerializer, ImageTaskUserOutputSerializer, FrameInputSerializer, FrameOutputSerializer, FrameOutputOCRSerializer
 from user_park.models import UserPark
+from parking_invoice.models import ParkingInvoice
+from user_profile.models import UserProfile
+from carpark import settings
 from django.views import View
 from django.http import JsonResponse
 from django.core.files.base import ContentFile
@@ -20,6 +23,8 @@ import logging
 import cv2
 import numpy as np
 from easyocr import Reader
+from datetime import timedelta
+from django.utils import timezone
 # Create your views here.
 
 class UserImageTasksView(generics.GenericAPIView):
@@ -199,7 +204,7 @@ class ProcessFrameView(generics.GenericAPIView):
 
 
 model_license_plate = YOLO('/Users/raduscortescu/Desktop/Car-Backend/carpark/image_task/license_plate_detector.pt')
-reader = Reader(['en'], gpu=False)
+reader = Reader(['en'])
 
 class ProcessEntranceExitView(generics.GenericAPIView):
     serializer_class = FrameInputSerializer
@@ -211,7 +216,8 @@ class ProcessEntranceExitView(generics.GenericAPIView):
             # Retrieve the frame and metadata
             frame = request.FILES.get('image_0')
             camera_address = request.POST.get('device_id_0')
-            parking_lot = request.POST.get('parking_lot')
+            parking_lot_address = request.POST.get('parking_lot')
+            token = request.POST.get('token')
 
             if not frame:
                 logging.error('No image file provided')
@@ -284,6 +290,46 @@ class ProcessEntranceExitView(generics.GenericAPIView):
                         ocr_results = reader.readtext(license_plate_img)
                         for ocr_result in ocr_results:
                             detection['ocr_text'] = ocr_result[1]
+
+                            # Check if an entry for this plate exists in the last 2 minutes
+                            recent_time = timezone.now() - timedelta(minutes=2)
+                            existing_invoices = ParkingInvoice.objects.filter(
+                                license_plate=ocr_result[1],
+                                timestamp__gte=recent_time
+                            )
+
+                            if not existing_invoices.exists():
+                                if token:
+                                    user = self.request.user if self.request.user.is_authenticated else None
+                                    if user is None and token:
+                                        try:
+                                            user = Token.objects.get(key=token).user
+                                        except Token.DoesNotExist:
+                                            print('user not found')
+                                    if user:
+                                        user = user
+                                else:
+                                    # Try to find user by license plate
+                                    try:
+                                        user_profile = UserProfile.objects.get(car_id=license_plate)
+                                        user = user_profile.user
+                                    except UserProfile.DoesNotExist:
+                                        user = 0  # No user found, use default value
+
+                                # Get the parking lot based on street address
+                                parking_lot = get_object_or_404(ParkingLot, street_address=parking_lot_address)
+
+                                # Create a new parking invoice
+                                ParkingInvoice.objects.create(
+                                    user=user,
+                                    parking_lot=parking_lot,
+                                    hourly_price=parking_lot.price,
+                                    spot_description='Example spot',
+                                    time_spent=1,  # Example time spent
+                                    final_cost=parking_lot.price,  # Example final cost
+                                    license_plate=ocr_result[1]
+                                )
+
                     except Exception as e:
                         logging.error(f'Error during OCR: {str(e)}')
 
@@ -301,7 +347,7 @@ class ProcessEntranceExitView(generics.GenericAPIView):
             # Prepare the response
             response_data = {
                 'camera_address': camera_address,
-                'parking_lot': parking_lot,
+                'parking_lot': parking_lot_address,
                 'detections': detections_list
             }
 
