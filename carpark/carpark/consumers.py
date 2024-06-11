@@ -3,14 +3,19 @@ import json
 import base64
 from django.core.files.base import ContentFile
 from .utils import process_image_and_extract_license_plate
+from parking_lot.models import ParkingLot
 from user_park.models import UserPark
 from parking_invoice.models import ParkingInvoice
 from user_profile.models import UserProfile
+from spot_detection.models import BoundingBox
+from parking_spot.models import ParkingSpot
+from image_task.models import ImageTask
+from spot_detection.serializers import BoundingBoxesSerializer
 from ultralytics import YOLO
 import os
 import cv2
 import numpy as np
-from PIL import Image, ImageEnhance
+from PIL import Image, ImageEnhance, ImageDraw
 import logging
 from django.shortcuts import get_object_or_404
 from rest_framework.authtoken.models import Token
@@ -249,19 +254,44 @@ class SpotFrameConsumer(AsyncWebsocketConsumer):
         try:
             data = json.loads(text_data)
             image_data = base64.b64decode(data['image'])
-            camera_address = data['device_id_0']
+            camera_address = data['camera_address']
             parking_lot_address = data['parking_lot']
+            camera_type = data.get('camera_type', 'localVideo')  # Default to 'localVideo' if not provided
             token = data['token']
 
+            print(f"Received data: camera_address={camera_address}, parking_lot_address={parking_lot_address}, camera_type={camera_type}")
+
+            # Retrieve the image task
+            image_task = await self.get_image_task(parking_lot_address, camera_address, camera_type)
+            if not image_task:
+                await self.send(text_data=json.dumps({'detail': 'Image task not found'}))
+                print("Image task not found")
+                return
+
+            print(f"Found image task: {image_task}")
+
+            # Fetch bounding boxes for the image task
+            bounding_boxes = await self.get_bounding_boxes(image_task)
+            print(f"Found bounding boxes: {bounding_boxes}")
+
             image_np = self.convert_image_data_to_np(image_data)
+            print(f"Converted image to numpy array: shape={image_np.shape}")
 
             results = model_car(image_np)
-            bounding_boxes = self.process_detections(results)
+            object_counts, summary_string = self.process_detections(results)
+            print(f"Processed detections: {summary_string}")
+
+            # Check overlap and update bounding boxes
+            updated_bounding_boxes = self.check_and_update_bounding_boxes(bounding_boxes, results)
+
+            # Save the image with bounding boxes
+            self.save_image_with_boxes(image_np, updated_bounding_boxes, results)
 
             response_data = {
                 'camera_address': camera_address,
                 'parking_lot': parking_lot_address,
-                'bounding_boxes': bounding_boxes
+                'summary_string': summary_string,
+                'bounding_boxes': updated_bounding_boxes
             }
 
             await self.send(text_data=json.dumps(response_data))
@@ -269,6 +299,39 @@ class SpotFrameConsumer(AsyncWebsocketConsumer):
 
         except Exception as e:
             print(f"Error processing WebSocket message: {str(e)}")
+
+    @sync_to_async
+    def get_image_task(self, parking_lot_address, camera_address, camera_type):
+        try:
+            print(f"Fetching parking lot: {parking_lot_address}")
+            parking_lot = ParkingLot.objects.filter(street_address=parking_lot_address).first()
+            if not parking_lot:
+                print("Parking lot not found")
+                return None
+
+            print(f"Fetching image task for parking_lot={parking_lot}, camera_address={camera_address}, camera_type={camera_type}")
+            image_task = ImageTask.objects.filter(parking_lot=parking_lot,
+                                                  camera_address=camera_address,
+                                                  camera_type=camera_type).first()
+            if image_task:
+                print(f"Image task details: {image_task}")
+            else:
+                print(f"No image task found with parking_lot={parking_lot}, camera_address={camera_address}, camera_type={camera_type}")
+            return image_task
+        except Exception as e:
+            print(f"Error retrieving image task: {str(e)}")
+            return None
+
+    @sync_to_async
+    def get_bounding_boxes(self, image_task):
+        try:
+            print(f"Fetching bounding boxes for image_task={image_task}")
+            bounding_boxes = BoundingBox.objects.filter(image_task=image_task)
+            bounding_boxes_data = BoundingBoxesSerializer(bounding_boxes, many=True).data
+            return bounding_boxes_data
+        except Exception as e:
+            print(f"Error retrieving bounding boxes: {str(e)}")
+            return []
 
     def convert_image_data_to_np(self, image_data):
         import cv2
@@ -294,3 +357,74 @@ class SpotFrameConsumer(AsyncWebsocketConsumer):
 
         summary_string = f"{object_counts['car']} cars, {object_counts['bus']} buses, {object_counts['truck']} trucks"
         return object_counts, summary_string
+
+    def check_and_update_bounding_boxes(self, bounding_boxes, results):
+        def calculate_iou(box1, box2):
+            x1_max = max(box1[0], box2[0])
+            y1_max = max(box1[1], box2[1])
+            x2_min = min(box1[2], box2[2])
+            y2_min = min(box1[3], box2[3])
+
+            inter_area = max(0, x2_min - x1_max) * max(0, y2_min - y1_max)
+
+            box1_area = (box1[2] - box1[0]) * (box1[3] - box1[1])
+            box2_area = (box2[2] - box2[0]) * (box2[3] - box2[1])
+
+            iou = inter_area / float(box1_area + box2_area - inter_area)
+            return iou
+
+        updated_bounding_boxes = []
+        iou_threshold = 0.2
+
+        for spot in bounding_boxes:
+            spot_box = [
+                spot['bounding_boxes_json'][0],
+                spot['bounding_boxes_json'][1],
+                spot['bounding_boxes_json'][2],
+                spot['bounding_boxes_json'][3]
+            ]
+            spot['is_empty'] = True
+
+            for result in results:
+                for box in result.boxes:
+                    cls = int(box.cls.cpu().numpy())
+                    class_name = model_car.names[cls] if cls in model_car.names else 'unknown'
+                    if class_name == 'car':
+                        car_box = box.xyxy[0].cpu().numpy().tolist()
+                        iou = calculate_iou(spot_box, car_box)
+                        if iou > iou_threshold:  # Threshold for considering the spot as occupied
+                            spot['is_empty'] = False
+                            break
+                if not spot['is_empty']:
+                    break
+
+            updated_bounding_boxes.append(spot)
+
+        return updated_bounding_boxes
+
+    def save_image_with_boxes(self, image_np, bounding_boxes, results):
+        # Convert the image to RGB (cv2 loads it as BGR by default)
+        image = cv2.cvtColor(image_np, cv2.COLOR_BGR2RGB)
+        
+        # Draw spot bounding boxes
+        for spot in bounding_boxes:
+            spot_box = [
+                int(spot['bounding_boxes_json'][0]),
+                int(spot['bounding_boxes_json'][1]),
+                int(spot['bounding_boxes_json'][2]),
+                int(spot['bounding_boxes_json'][3])
+            ]
+            color = (0, 255, 0) if spot['is_empty'] else (0, 0, 255)  # Green if empty, red if occupied
+            cv2.rectangle(image, (spot_box[0], spot_box[1]), (spot_box[2], spot_box[3]), color, 2)
+
+        # Draw car bounding boxes
+        for result in results:
+            for box in result.boxes:
+                car_box = box.xyxy[0].cpu().numpy().astype(int).tolist()
+                cv2.rectangle(image, (car_box[0], car_box[1]), (car_box[2], car_box[3]), (255, 0, 0), 2)  # Blue for cars
+
+        # Save the image with bounding boxes locally for debugging
+        debug_image_path = os.path.join('debug_images', 'debug_image_with_boxes.jpg')
+        os.makedirs(os.path.dirname(debug_image_path), exist_ok=True)  # Ensure the directory exists
+        cv2.imwrite(debug_image_path, image)
+        print(f'Debug image with bounding boxes saved at: {debug_image_path}')
