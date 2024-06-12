@@ -35,7 +35,7 @@ class OccupancyMetricsByAddressView(generics.GenericAPIView):
                 occupancy_metrics, metrics_created = OccupancyMetrics.objects.get_or_create(
                     parking_lot=parking_lot,
                     defaults={
-                        'total_current_occupancy': 0,
+                        'total_current_occupancy': 10,
                         'current_occupancy': {
                             'Monday': {f"{i:02d}:00": 0 for i in range(24)},
                             'Tuesday': {f"{i:02d}:00": 0 for i in range(24)},
@@ -58,7 +58,8 @@ class OccupancyMetricsByAddressView(generics.GenericAPIView):
                 )
                 response_data = {
                     'current_occupancy': occupancy_metrics.current_occupancy,
-                    'average_occupancy': occupancy_metrics.average_occupancy
+                    'average_occupancy': occupancy_metrics.average_occupancy,
+                    'total_current_occupancy': occupancy_metrics.total_current_occupancy
                 }
                 return Response(response_data)
             except ParkingLot.DoesNotExist:

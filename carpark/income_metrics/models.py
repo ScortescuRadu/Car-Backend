@@ -26,6 +26,7 @@ def default_monthly_income():
 
 class IncomeMetrics(models.Model):
     parking_lot = models.ForeignKey(ParkingLot, on_delete=models.CASCADE)
+    total_current_income = models.PositiveIntegerField(default=0)
     daily_current = models.JSONField(default=default_daily_income)
     daily_average = models.JSONField(default=default_daily_income)
     monthly_total = models.JSONField(default=default_monthly_income)

@@ -34,6 +34,7 @@ class IncomeMetricsByAddressView(generics.GenericAPIView):
                 income_metrics, metrics_created = IncomeMetrics.objects.get_or_create(
                     parking_lot=parking_lot,
                     defaults={
+                        'total_current_income': 10,
                         'daily_current': {
                             'Monday': 0, 'Tuesday': 0, 'Wednesday': 0,
                             'Thursday': 0, 'Friday': 0, 'Saturday': 0, 'Sunday': 0
@@ -54,7 +55,8 @@ class IncomeMetricsByAddressView(generics.GenericAPIView):
                     'daily_current': income_metrics.daily_current,
                     'daily_average': income_metrics.daily_average,
                     'monthly_total': income_metrics.monthly_total,
-                    'yearly_total': income_metrics.yearly_total
+                    'yearly_total': income_metrics.yearly_total,
+                    'total_current_income': income_metrics.total_current_income
                 }
                 return Response(response_data)
             except ParkingLot.DoesNotExist:
