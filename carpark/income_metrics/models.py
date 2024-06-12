@@ -1,6 +1,7 @@
 from django.db import models
 from parking_lot.models import ParkingLot
-
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 # Create your models here.
 
 def default_daily_income():
@@ -35,3 +36,26 @@ class IncomeMetrics(models.Model):
 
     def __str__(self):
         return f"Income Metrics for {self.parking_lot.street_address}"
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        self.trigger_update()
+
+    def trigger_update(self):
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            "parking_lot_updates",
+            {
+                "type": "send_parking_lot_update",
+                "data": {
+                    "id": self.id,
+                    "total_current_income": self.total_current_income,
+                    "daily_current": self.daily_current,
+                    "daily_average": self.daily_average,
+                    "monthly_total": self.monthly_total,
+                    "yearly_total": self.yearly_total,
+                    "last_update": self.last_update.isoformat(),
+                    "street_address": self.parking_lot.street_address
+                }
+            }
+        )

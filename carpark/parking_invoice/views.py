@@ -236,11 +236,22 @@ class ParkingInvoiceListView(generics.CreateAPIView):
 
     def post(self, request, *args, **kwargs):
         selected_address = self.request.data.get('selectedAddress')
+        time_frame = self.request.data.get('timeFrame')
         if not selected_address:
             return Response({"error": "selectedAddress is required"}, status=400)
 
         parking_lot = get_object_or_404(ParkingLot, street_address=selected_address)
-        invoices = ParkingInvoice.objects.filter(parking_lot=parking_lot)
+
+        if time_frame == 'today':
+            start_time = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        elif time_frame == 'lastWeek':
+            start_time = timezone.now() - timedelta(days=7)
+        elif time_frame == 'lastMonth':
+            start_time = timezone.now() - timedelta(days=30)
+        else:
+            start_time = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+
+        invoices = ParkingInvoice.objects.filter(parking_lot=parking_lot, timestamp__gte=start_time)
 
         serializer = ParkingInvoiceSerializer(invoices, many=True)
         return Response(serializer.data)
