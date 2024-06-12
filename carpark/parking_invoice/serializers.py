@@ -29,6 +29,10 @@ class LicensePlateSerializer(serializers.Serializer):
     license_plate = serializers.CharField(max_length=255)
 
 
+class ParkingInvoiceAddressSerializer(serializers.Serializer):
+    selected_address = serializers.CharField(max_length=255)
+
+
 class ParkingInvoiceOutputSerializer(serializers.ModelSerializer):
     final_cost = serializers.SerializerMethodField()
     time_spent = serializers.SerializerMethodField()

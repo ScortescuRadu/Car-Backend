@@ -6,7 +6,9 @@ from .views import (
     ParkingInvoiceCountView,
     UnpaidInvoicesByLicensePlateView,
     CalculatePriceView,
-    CreateReservationView)
+    CreateReservationView,
+    ParkingInvoiceListView,
+    ParkingInvoiceDeleteView)
 
 urlpatterns = [
     # Other URL patterns
@@ -17,4 +19,6 @@ urlpatterns = [
     path('license/unpaid/', UnpaidInvoicesByLicensePlateView.as_view(), name='unpaid-invoices-by-license'),
     path('calculate-price/', CalculatePriceView.as_view(), name='calculate_price'),
     path('reserve/', CreateReservationView.as_view(), name='reserve'),
+    path('by-lot/', ParkingInvoiceListView.as_view(), name='by-lot'),
+    path('delete/', ParkingInvoiceDeleteView.as_view(), name='delete'),
 ]

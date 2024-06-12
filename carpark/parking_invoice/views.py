@@ -3,7 +3,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import TokenAuthentication 
 from django.middleware.csrf import get_token
 from .models import ParkingInvoice
-from .serializers import ParkingInvoiceSerializer, LicensePlateSerializer, ParkingInvoiceOutputSerializer, PriceCalculationInputSerializer, PriceOutputSerializer, ParkingInvoiceReservationSerializer
+from .serializers import ParkingInvoiceSerializer, LicensePlateSerializer, ParkingInvoiceOutputSerializer, PriceCalculationInputSerializer, PriceOutputSerializer, ParkingInvoiceReservationSerializer, ParkingInvoiceAddressSerializer
 from user_profile.models import UserProfile
 from parking_lot.models import ParkingLot
 from rest_framework.response import Response
@@ -13,7 +13,9 @@ from datetime import timedelta
 from django.utils import timezone
 from django.http import Http404
 from decimal import Decimal
+from django.shortcuts import get_object_or_404
 from rest_framework.generics import GenericAPIView
+from rest_framework.views import APIView
 from rest_framework.authtoken.models import Token
 import json
 
@@ -225,3 +227,48 @@ class CreateReservationView(generics.CreateAPIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ParkingInvoiceListView(generics.CreateAPIView):
+    queryset = ParkingInvoice.objects.all()
+    serializer_class = ParkingInvoiceAddressSerializer
+    authentication_classes = [TokenAuthentication]
+
+    def post(self, request, *args, **kwargs):
+        selected_address = self.request.data.get('selectedAddress')
+        if not selected_address:
+            return Response({"error": "selectedAddress is required"}, status=400)
+
+        parking_lot = get_object_or_404(ParkingLot, street_address=selected_address)
+        invoices = ParkingInvoice.objects.filter(parking_lot=parking_lot)
+
+        serializer = ParkingInvoiceSerializer(invoices, many=True)
+        return Response(serializer.data)
+
+
+class ParkingInvoiceDeleteView(APIView):
+    authentication_classes = [TokenAuthentication]
+
+    def delete(self, request, *args, **kwargs):
+        parking_lot_address = request.data.get('parking_lot')
+        timestamp = request.data.get('timestamp')
+        license_plate = request.data.get('license_plate')
+
+        if not parking_lot_address or not timestamp or not license_plate:
+            return Response({'error': 'Missing required fields'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            parking_lot = ParkingLot.objects.get(street_address=parking_lot_address)
+        except ParkingLot.DoesNotExist:
+            return Response({'error': 'Parking lot not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            invoice = ParkingInvoice.objects.get(
+                parking_lot=parking_lot,
+                timestamp=timestamp,
+                license_plate=license_plate
+            )
+            invoice.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except ParkingInvoice.DoesNotExist:
+            return Response({'error': 'Invoice not found'}, status=status.HTTP_404_NOT_FOUND)
