@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from rest_framework import viewsets, status
 from rest_framework import generics
+from rest_framework.views import APIView
 from .models import ParkingLot
 from user_park.models import UserPark
 from city.models import City
@@ -501,3 +502,17 @@ class OpenParkingLotsView(generics.ListAPIView):
         queryset = self.get_queryset()
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
+
+
+class ParkingLotScanView(APIView):
+    def get(self, request, *args, **kwargs):
+        address = request.query_params.get('address')
+        if not address:
+            return Response({"error": "Address parameter is required."}, status=400)
+        
+        try:
+            parking_lot = ParkingLot.objects.get(street_address=address)
+            serializer = StreetAddressSerializer(parking_lot)
+            return Response(serializer.data)
+        except ParkingLot.DoesNotExist:
+            return Response({"error": "Parking lot not found."}, status=404)
