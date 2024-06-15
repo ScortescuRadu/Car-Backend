@@ -283,3 +283,41 @@ class ParkingInvoiceDeleteView(APIView):
             return Response(status=status.HTTP_204_NO_CONTENT)
         except ParkingInvoice.DoesNotExist:
             return Response({'error': 'Invoice not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+class CreateInvoiceView(APIView):
+    authentication_classes = [TokenAuthentication]
+
+    def post(self, request, *args, **kwargs):
+        address = request.data.get('address')
+        token = request.data.get('token')
+
+        if not address or not token:
+            return Response({'error': 'Address and token are required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            token_obj = Token.objects.get(key=token)
+            user = token_obj.user
+        except Token.DoesNotExist:
+            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        try:
+            parking_lot = ParkingLot.objects.get(street_address=address)
+        except ParkingLot.DoesNotExist:
+            return Response({'error': 'Parking lot not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        invoice_data = {
+            'user': user.id,
+            'parking_lot': parking_lot.id,
+            'hourly_price': parking_lot.price,
+            'spot_description': 'Default description',
+            'license_plate': 'ABC123',  # This should be replaced with actual license plate if available
+            'timestamp': timezone.now(),
+        }
+
+        serializer = ParkingInvoiceSerializer(data=invoice_data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
