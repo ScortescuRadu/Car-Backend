@@ -10,7 +10,7 @@ class ParkingInvoiceSerializer(serializers.ModelSerializer):
     class Meta:
         model = ParkingInvoice
         fields = ['parking_lot', 'hourly_price', 'spot_description',
-        'timestamp', 'time_spent', 'final_cost', 'license_plate', 'address']
+        'timestamp', 'time_spent', 'final_cost', 'license_plate', 'address', 'is_paid']
 
 
 class ParkingInvoiceReservationSerializer(serializers.ModelSerializer):
