@@ -14,7 +14,7 @@ import os
 def add(x, y):
     return x + y
 
-# using websockets
+
 @shared_task
 def process_image_task(image_base64):
     image_data = base64.b64decode(image_base64)
@@ -48,9 +48,9 @@ def process_image_task(image_base64):
 
     for result in results:
         # Convert numpy arrays to lists for serialization
-        xyxys.append(result.boxes.xyxy.cpu().numpy().tolist())  # Assuming 'result.boxes.xyxy' gives the bounding boxes
-        confidences.append(result.boxes.conf.cpu().numpy().tolist())  # Assuming 'result.boxes.conf' gives the confidences
-        class_ids.append(result.boxes.cls.cpu().numpy().tolist())  # Assuming 'result.boxes.cls' gives the class IDs
+        xyxys.append(result.boxes.xyxy.cpu().numpy().tolist())
+        confidences.append(result.boxes.conf.cpu().numpy().tolist())
+        class_ids.append(result.boxes.cls.cpu().numpy().tolist())
 
     # Processing complete, send bounding boxes
     async_to_sync(channel_layer.group_send)(
