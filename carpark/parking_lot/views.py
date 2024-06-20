@@ -19,13 +19,16 @@ from .serializers import (ParkingLotSerializer,
     ParkTimesUpdateSerializer,
     ParkCapacityUpdateSerializer,
     ParkAddressUpdateSerializer,
-    ParkingLotRadiusSearchSerializer)
+    ParkingLotRadiusSearchSerializer,
+    FindByAddressSerializer)
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import get_user_model
 from rest_framework.response import Response
 from django.contrib.gis.geos import Point
 from django.contrib.gis.db.models.functions import Distance
 from django.utils import timezone
+from parking_spot.models import ParkingSpot
+from parking_spot.serializers import ParkingSpotSerializer
 
 # Create your views here.
 
@@ -516,3 +519,26 @@ class ParkingLotScanView(APIView):
             return Response(serializer.data)
         except ParkingLot.DoesNotExist:
             return Response({"error": "Parking lot not found."}, status=404)
+
+
+class AvailableParkingSpotView(generics.GenericAPIView):
+    serializer_class = FindByAddressSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        street_address = serializer.validated_data['street_address']
+        print(street_address)
+
+        try:
+            parking_lot = ParkingLot.objects.get(street_address=street_address)
+        except ParkingLot.DoesNotExist:
+            return Response({'error': 'Parking lot not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        available_spot = ParkingSpot.objects.filter(parking_lot=parking_lot, is_occupied=False).first()
+
+        if not available_spot:
+            return Response({'error': 'No available spots found'}, status=status.HTTP_404_NOT_FOUND)
+
+        spot_serializer = ParkingSpotSerializer(available_spot)
+        return Response(spot_serializer.data, status=status.HTTP_200_OK)

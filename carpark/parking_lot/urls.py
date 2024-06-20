@@ -13,7 +13,8 @@ from .views import (ParkingLotListCreateView,
     ParkingLotEditCapacity,
     ParkingLotEditAddress,
     OpenParkingLotsView,
-    ParkingLotScanView)
+    ParkingLotScanView,
+    AvailableParkingSpotView)
 
 urlpatterns = [
     path('parking-lot/', ParkingLotListCreateView.as_view(), name='parking-lots-list-create'),
@@ -31,4 +32,5 @@ urlpatterns = [
     path('address-update/', ParkingLotEditAddress.as_view(), name='address-update'),
     path('radius-search/', OpenParkingLotsView.as_view(), name='radius-search'),
     path('scan/', ParkingLotScanView.as_view(), name='parking_lot_scan'),
+    path('available-spot/', AvailableParkingSpotView.as_view(), name='available-spot'),
 ]

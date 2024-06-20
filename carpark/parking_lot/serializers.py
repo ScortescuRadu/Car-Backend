@@ -21,6 +21,10 @@ class StreetAddressSerializer(serializers.ModelSerializer):
         fields = ['street_address']
 
 
+class FindByAddressSerializer(serializers.Serializer):
+    street_address = serializers.CharField(max_length=255)
+
+
 class CityNameSerializer(serializers.Serializer):
     city_name = serializers.CharField(max_length=255)
 
