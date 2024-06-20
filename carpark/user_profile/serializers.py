@@ -7,5 +7,13 @@ class UserProfileSerializer(serializers.ModelSerializer):
         fields = ['id', 'username', 'car_id']
 
 
+class UserProfileCreateSerializer(serializers.ModelSerializer):
+    token = serializers.CharField()
+
+    class Meta:
+        model = UserProfile
+        fields = ['token', 'username', 'car_id']
+
+
 class UserProfileTokenSerializer(serializers.Serializer):
     token = serializers.CharField()

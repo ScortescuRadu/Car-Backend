@@ -4,34 +4,50 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import AllowAny
 from .models import UserProfile
-from .serializers import UserProfileSerializer, UserProfileTokenSerializer
+from .serializers import UserProfileSerializer, UserProfileCreateSerializer, UserProfileTokenSerializer
 from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
 
 # Create your views here.
 
-class UserProfileCreateView(generics.CreateAPIView):
-    serializer_class = UserProfileSerializer
-    permission_classes = [permissions.IsAuthenticated]
+class UserProfileCreateView(generics.GenericAPIView):
+    serializer_class = UserProfileCreateSerializer
+    permission_classes = [AllowAny]
 
-    def perform_create(self, serializer):
-        username = serializer.validated_data['username']
+    def post(self, request, *args, **kwargs):
+        # Validate the input serializer
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
 
-        if UserProfile.objects.filter(username=username).exists():
-            return Response({'error': 'Username already exists.'}, status=400)
-        
-         # Check if a UserProfile with the provided username already exists for the user
-        existing_profile = UserProfile.objects.filter(user=self.request.user.id).first()
+        # Extract the token from the validated data
+        token = serializer.validated_data.pop('token')
+        print(f'Received token: {token}')
+
+        # Create a mock request with the token in the headers for authentication
+        request.META['HTTP_AUTHORIZATION'] = f'Token {token}'
+        print(f'Request headers: {request.META["HTTP_AUTHORIZATION"]}')
+
+        # Authenticate the user
+        user, auth_token = TokenAuthentication().authenticate(request)
+        if not user:
+            raise ValidationError("Invalid token")
+
+        print(f'Authenticated user: {user}, token: {auth_token}')
+
+        # Check if a UserProfile with the provided username already exists for the user
+        existing_profile = UserProfile.objects.filter(user=user).first()
 
         if existing_profile:
             # Update the existing profile with the new data
             serializer.update(existing_profile, serializer.validated_data)
-            return Response({'message': 'UserProfile updated successfully.'}, status=200)
+            profile_serializer = UserProfileSerializer(existing_profile)
+            return Response(profile_serializer.data, status=status.HTTP_200_OK)
         else:
             # If no profile exists, create a new one
-            serializer.save(user=self.request.user)
-            return Response({'message': 'UserProfile created successfully.'}, status=201)
+            new_profile = serializer.save(user=user)
+            profile_serializer = UserProfileSerializer(new_profile)
+            return Response(profile_serializer.data, status=status.HTTP_201_CREATED)
 
 
 class UserProfileByUserView(generics.GenericAPIView):
