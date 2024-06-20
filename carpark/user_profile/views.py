@@ -2,8 +2,9 @@ from django.shortcuts import render
 from rest_framework import generics, permissions
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import TokenAuthentication
+from rest_framework.permissions import AllowAny
 from .models import UserProfile
-from .serializers import UserProfileSerializer
+from .serializers import UserProfileSerializer, UserProfileTokenSerializer
 from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
@@ -33,21 +34,37 @@ class UserProfileCreateView(generics.CreateAPIView):
             return Response({'message': 'UserProfile created successfully.'}, status=201)
 
 
-class UserProfileByUserView(generics.RetrieveAPIView):
-    serializer_class = UserProfileSerializer
-    permission_classes = (IsAuthenticated,)
-    authentication_classes = [TokenAuthentication]
+class UserProfileByUserView(generics.GenericAPIView):
+    serializer_class = UserProfileTokenSerializer
+    permission_classes = [AllowAny]
 
-    def get_user_from_token(self, request):
-        print('searching')
-        # Extract user from the authentication token
-        user, _ = TokenAuthentication().authenticate(request)
-        return user
-
-    def get_object(self):
-        # Retrieve the profile picture for the current user
-        user = self.get_user_from_token(self.request)
-        return get_object_or_404(UserProfile, user=user)
+    def post(self, request, *args, **kwargs):
+        # Validate the input serializer
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        # Extract the token from the validated data
+        token = serializer.validated_data['token']
+        print(f'Received token: {token}')
+        
+        # Create a mock request with the token in the headers for authentication
+        request.META['HTTP_AUTHORIZATION'] = f'Token {token}'
+        print(f'Request headers: {request.META["HTTP_AUTHORIZATION"]}')
+        
+        # Authenticate the user
+        user, auth_token = TokenAuthentication().authenticate(request)
+        if not user:
+            raise ValidationError("Invalid token")
+        
+        print(f'Authenticated user: {user}, token: {auth_token}')
+        
+        # Retrieve the user profile
+        profile = get_object_or_404(UserProfile, user=user)
+        print(f'User profile found: {profile}')
+        
+        # Serialize the user profile
+        profile_serializer = UserProfileSerializer(profile)
+        return Response(profile_serializer.data, status=status.HTTP_200_OK)
 
 
 class UserProfileDeleteView(generics.DestroyAPIView):

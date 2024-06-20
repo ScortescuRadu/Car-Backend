@@ -170,7 +170,7 @@ class CreateWebCheckoutSessionView(APIView):
     def post(self, request, *args, **kwargs):
         # Deserialize the incoming JSON data
         data = request.data
-        product_name = data.get('name', 'Default Product Name')
+        product_name = data.get('name', 'Default  Payment')
         price = data.get('price', 0)
         license_plate = data.get('licensePlate', '')
         spot = data.get('spot', '')
