@@ -3,7 +3,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import TokenAuthentication 
 from django.middleware.csrf import get_token
 from .models import ParkingInvoice
-from .serializers import ParkingInvoiceSerializer, LicensePlateSerializer, ParkingInvoiceOutputSerializer, PriceCalculationInputSerializer, PriceOutputSerializer, ParkingInvoiceReservationSerializer, ParkingInvoiceAddressSerializer
+from .serializers import ParkingInvoiceSerializer, LicensePlateSerializer, ParkingInvoiceOutputSerializer, PriceCalculationInputSerializer, PriceOutputSerializer, ParkingInvoiceReservationSerializer, ParkingInvoiceAddressSerializer, PaidInvoicesInputSerializer
 from user_profile.models import UserProfile
 from parking_lot.models import ParkingLot
 from rest_framework.response import Response
@@ -90,24 +90,50 @@ class UnpaidInvoicesListView(generics.ListAPIView):
         return unpaid_invoices
 
 
-class PaidInvoicesListView(generics.ListAPIView):
-    serializer_class = ParkingInvoiceSerializer
+class PaidInvoicesListView(GenericAPIView):
+    serializer_class = PaidInvoicesInputSerializer
     authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        user = self.request.user if self.request.user else None
-        print(user)
-        recent_param = self.request.headers.get('Recent')
-        print(recent_param)
+        """
+        Override to provide a default or context-specific queryset.
+        """
+        if self.request.method == 'GET':
+            # Optionally handle GET requests differently, or raise an exception if GET is not supported.
+            raise Http404("GET method is not supported on this endpoint")
+        # Default empty queryset for POST if needed prior to filtering.
+        return ParkingInvoice.objects.none()
 
+    def get_user_from_token(self, token):
+        # Create a mock request with the token in the headers for authentication
+        self.request.META['HTTP_AUTHORIZATION'] = f'Token {token}'
+        user, _ = TokenAuthentication().authenticate(self.request)
+        return user
+
+    def post(self, request, *args, **kwargs):
+        # Validate the input serializer
+        input_serializer = self.get_serializer(data=request.data)
+        input_serializer.is_valid(raise_exception=True)
+        
+        # Extract the validated data
+        token = input_serializer.validated_data['token']
+        recent_param = input_serializer.validated_data['recent_param']
+        
+        # Authenticate the user
+        user = self.get_user_from_token(token)
+        if not user:
+            raise ValidationError("Invalid token")
+        
+        # Get the queryset based on the recent_param
         if recent_param == -1:
-            return ParkingInvoice.objects.filter(user=user, is_paid=True)
+            queryset = ParkingInvoice.objects.filter(user=user, is_paid=True)
         else:
-            print(recent_param)
-            recent_time = timezone.now() - timedelta(days=int(recent_param))
-            print(recent_time)
-            return ParkingInvoice.objects.filter(user=user, is_paid=False, timestamp__gte=recent_time)
+            recent_time = timezone.now() - timedelta(days=recent_param)
+            queryset = ParkingInvoice.objects.filter(user=user, is_paid=True, timestamp__gte=recent_time)
+        
+        # Serialize the queryset
+        serializer = ParkingInvoiceSerializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class ParkingInvoiceCountView(generics.ListAPIView):

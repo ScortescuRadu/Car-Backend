@@ -13,6 +13,11 @@ class ParkingInvoiceSerializer(serializers.ModelSerializer):
         'timestamp', 'time_spent', 'final_cost', 'license_plate', 'address', 'is_paid']
 
 
+class PaidInvoicesInputSerializer(serializers.Serializer):
+    token = serializers.CharField()
+    recent_param = serializers.IntegerField()
+
+
 class ParkingInvoiceReservationSerializer(serializers.ModelSerializer):
     class Meta:
         model = ParkingInvoice
