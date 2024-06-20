@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import ParkingLot
+from ocupancy_metrics.models import OccupancyMetrics
 
 class ParkingLotSerializer(serializers.ModelSerializer):
     class Meta:
@@ -89,6 +90,14 @@ class ParkAddressUpdateSerializer(serializers.Serializer):
 
 
 class ParkingLotRadiusSearchSerializer(serializers.ModelSerializer):
+    current_occupancy = serializers.SerializerMethodField()
+
     class Meta:
         model = ParkingLot
-        fields = ['id', 'price', 'capacity', 'street_address', 'latitude', 'longitude']
+        fields = ['id', 'price', 'capacity', 'street_address', 'latitude', 'longitude', 'current_occupancy']
+
+    def get_current_occupancy(self, obj):
+        occupancy_metrics = OccupancyMetrics.objects.filter(parking_lot=obj).first()
+        if occupancy_metrics:
+            return occupancy_metrics.total_current_occupancy
+        return None
