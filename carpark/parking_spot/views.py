@@ -1,5 +1,6 @@
 from django.shortcuts import render
 from rest_framework import generics, status
+from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import TokenAuthentication
@@ -76,3 +77,28 @@ class ParkingSpotListView(generics.GenericAPIView):
             data.append(task_data)
 
         return Response(data, status=status.HTTP_200_OK)
+
+
+class SaveTilesView(APIView):
+    def post(self, request):
+        selected_address = request.data.get('selectedAddress')
+        parking_tiles = request.data.get('parkingTiles')
+
+        if parking_tiles is None:
+            return Response({'error': 'No parking tiles provided'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            parking_lot = ParkingLot.objects.get(street_address=selected_address)
+            for tile in parking_tiles:
+                ParkingSpot.objects.create(
+                    parking_lot=parking_lot,
+                    level=tile['level'],
+                    sector=tile['sector'],
+                    number=tile['number'],
+                    is_occupied=False
+                )
+            return Response({'message': 'Parking spots created successfully'}, status=status.HTTP_201_CREATED)
+        except ParkingLot.DoesNotExist:
+            return Response({'error': 'Parking lot not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
