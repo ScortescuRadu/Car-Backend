@@ -93,6 +93,41 @@ class ParkingSpotUpdateConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps(event["data"]))
 
 
+class LicensePlateConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        self.room_name = 'license_plates'
+        self.room_group_name = 'license_plates_group'
+        await self.channel_layer.group_add(
+            self.room_group_name,
+            self.channel_name
+        )
+
+        await self.accept()
+
+    async def disconnect(self, close_code):
+        await self.channel_layer.group_discard(
+            self.room_group_name,
+            self.channel_name
+        )
+
+    async def receive(self, text_data):
+        text_data_json = json.loads(text_data)
+        message = text_data_json['message']
+        await self.channel_layer.group_send(
+            self.room_group_name,
+            {
+                'type': 'license_plate_message',
+                'message': message
+            }
+        )
+
+    async def license_plate_message(self, event):
+        message = event['message']
+        await self.send(text_data=json.dumps({
+            'message': message
+        }))
+
+
 model_license_plate = YOLO('/Users/raduscortescu/Desktop/Car-Backend/carpark/image_task/license_plate_detector.pt')
 reader = Reader(['en'])
 

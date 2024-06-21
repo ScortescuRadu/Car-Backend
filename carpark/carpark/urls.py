@@ -66,7 +66,7 @@ urlpatterns = [
     # Parking Lot
     path('parking/', include('parking_lot.urls')),
     path('time/', include('operating_time.urls')),
-    path('entrance/', include('entrance.urls')),
+    # path('entrance/', include('entrance.urls')),
     path('parking/', include('park_entrance.urls')),
     path('income/', include('income_metrics.urls')),
     path('ocupancy/', include('ocupancy_metrics.urls')),
@@ -93,6 +93,8 @@ urlpatterns = [
     path('spot-detection/', include('spot_detection.urls')),
     path('image-dataset/', include('image_dataset.urls')),
     path('image-task/', include('image_task.urls')),
+    path('entrance/', include('entrance_license.urls')),
+    path('exit/', include('exit_license.urls')),
 ]
 
 if settings.DEBUG:
