@@ -435,17 +435,22 @@ class SpotFrameConsumer(AsyncWebsocketConsumer):
             updated_bounding_boxes = self.check_and_update_bounding_boxes(bounding_boxes, results)
 
             # Save the image with bounding boxes
-            self.save_image_with_boxes(image_np, updated_bounding_boxes, results)
+            # self.save_image_with_boxes(image_np, updated_bounding_boxes, results)
+
+            image_with_boxes = self.save_image_with_boxes(image_np, updated_bounding_boxes, results)
+
+            _, buffer = cv2.imencode('.jpg', image_with_boxes)
+            encoded_image = base64.b64encode(buffer).decode('utf-8')
 
             response_data = {
                 'camera_address': camera_address,
                 'parking_lot': parking_lot_address,
                 'summary_string': summary_string,
-                'bounding_boxes': updated_bounding_boxes
+                'image_data': encoded_image
             }
 
             await self.send(text_data=json.dumps(response_data))
-            print(f"Sent response data: {response_data}")
+            # print(f"Sent response data: {response_data}")
 
         except Exception as e:
             print(f"Error processing WebSocket message: {str(e)}")
@@ -554,6 +559,7 @@ class SpotFrameConsumer(AsyncWebsocketConsumer):
 
     def save_image_with_boxes(self, image_np, bounding_boxes, results):
         # Convert the image to RGB (cv2 loads it as BGR by default)
+        # Convert the image to RGB (cv2 loads it as BGR by default)
         image = cv2.cvtColor(image_np, cv2.COLOR_BGR2RGB)
         
         # Draw spot bounding boxes
@@ -573,8 +579,4 @@ class SpotFrameConsumer(AsyncWebsocketConsumer):
                 car_box = box.xyxy[0].cpu().numpy().astype(int).tolist()
                 cv2.rectangle(image, (car_box[0], car_box[1]), (car_box[2], car_box[3]), (255, 0, 0), 2)  # Blue for cars
 
-        # Save the image with bounding boxes locally for debugging
-        debug_image_path = os.path.join('debug_images', 'debug_image_with_boxes.jpg')
-        os.makedirs(os.path.dirname(debug_image_path), exist_ok=True)  # Ensure the directory exists
-        cv2.imwrite(debug_image_path, image)
-        print(f'Debug image with bounding boxes saved at: {debug_image_path}')
+        return image
