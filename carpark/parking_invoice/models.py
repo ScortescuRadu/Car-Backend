@@ -8,7 +8,7 @@ from channels.layers import get_channel_layer
 # Create your models here.
 
 class ParkingInvoice(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, default=1)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, default=None)
     parking_lot = models.ForeignKey(ParkingLot, on_delete=models.CASCADE, default=None)
     timestamp = models.DateTimeField(default=timezone.now)
     hourly_price = models.DecimalField(max_digits=8, decimal_places=2)

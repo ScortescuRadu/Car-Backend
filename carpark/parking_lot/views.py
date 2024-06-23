@@ -473,30 +473,43 @@ class OpenParkingLotsView(generics.ListAPIView):
         distance = self.request.query_params.get('distance')
 
         if lat is None or lon is None or distance is None:
+            print("Missing query parameters")
             return ParkingLot.objects.none()
 
         user_lat = float(lat)
         user_lon = float(lon)
         distance_km = float(distance)
 
+        print(f"User location: lat={user_lat}, lon={user_lon}, distance={distance_km}km")
+
         parking_lots = ParkingLot.objects.all()
+        print(f"Total parking lots: {len(parking_lots)}")
 
         now = timezone.localtime()
         current_time = now.time()
         current_weekday = now.weekday()
+        print(f"Current time: {current_time}, Current weekday: {current_weekday}")
         open_parking_lots = []
         for lot in parking_lots:
+            print(f"Checking parking lot: {lot.street_address}")
             if lot.latitude is not None and lot.longitude is not None:
                 lot_distance = haversine(user_lat, user_lon, float(lot.latitude), float(lot.longitude))
+                print(f"Distance to parking lot {lot.street_address}: {lot_distance}km")
                 if lot_distance <= distance_km:
                     if current_weekday < 5:  # Monday to Friday
                         if lot.weekday_opening_time and lot.weekday_closing_time:
                             if lot.weekday_opening_time <= current_time <= lot.weekday_closing_time:
+                                print(f"Parking lot {lot.street_address} is open on weekdays")
                                 open_parking_lots.append(lot)
+                            else:
+                                print(f"Parking lot {lot.street_address} is closed on weekdays")
                     else:  # Saturday and Sunday
                         if lot.weekend_opening_time and lot.weekend_closing_time:
                             if lot.weekend_opening_time <= current_time <= lot.weekend_closing_time:
+                                print(f"Parking lot {lot.street_address} is open on weekends")
                                 open_parking_lots.append(lot)
+                            else:
+                                print(f"Parking lot {lot.street_address} is closed on weekends")
         print(open_parking_lots)
 
         return open_parking_lots

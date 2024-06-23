@@ -336,7 +336,7 @@ class CreateInvoiceView(APIView):
             'user': user.id,
             'parking_lot': parking_lot.id,
             'hourly_price': parking_lot.price,
-            'spot_description': 'Default description',
+            'spot_description': 'B15',
             'license_plate': 'ABC123',  # This should be replaced with actual license plate if available
             'timestamp': timezone.now(),
         }

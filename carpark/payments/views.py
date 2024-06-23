@@ -83,7 +83,7 @@ class PaymentSheetView(View):
 
             # Create a payment intent
             payment_intent = stripe.PaymentIntent.create(
-                amount=200,
+                amount=1500,
                 currency='eur',
                 customer=customer_id,
             )
